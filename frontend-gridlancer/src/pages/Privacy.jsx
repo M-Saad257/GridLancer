@@ -1,0 +1,33 @@
+import React, { useEffect } from 'react';
+import Navbar from '../Global/Navbar';
+import Footer from '../components/Footer';
+
+const Privacy = () => {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans bg-slate-950 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-[800px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+      <Navbar />
+      <div className="flex-grow pt-32 pb-20 px-6 lg:px-8 relative z-10">
+        <div className="max-w-4xl mx-auto bg-slate-900 p-12 rounded-3xl shadow-2xl shadow-indigo-500/10 border border-slate-800">
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-8 border-b border-slate-800 pb-6">Privacy Policy</h1>
+          <div className="prose max-w-none text-slate-300">
+            <p className="text-sm text-slate-500 uppercase tracking-widest font-semibold mb-8">Last updated: {new Date().toLocaleDateString()}</p>
+            <h2 className="text-2xl font-bold text-white mt-10 mb-4">1. Information We Collect</h2>
+            <p className="mb-6 leading-relaxed">We collect information you provide directly to us, such as when you create or modify your account, request services, contact customer support, or otherwise communicate with us.</p>
+            <h2 className="text-2xl font-bold text-white mt-10 mb-4">2. How We Use Information</h2>
+            <p className="mb-6 leading-relaxed">We use the information we collect to provide, maintain, and improve our services, such as to process transactions, authenticate users, and send administrative messages.</p>
+            <h2 className="text-2xl font-bold text-white mt-10 mb-4">3. Information Sharing</h2>
+            <p className="mb-6 leading-relaxed">We may share information about you as follows or as otherwise described in this Privacy Policy: with vendors, consultants, and other service providers who need access to such information to carry out work on our behalf.</p>
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default Privacy;
