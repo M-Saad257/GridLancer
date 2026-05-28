@@ -168,12 +168,26 @@ const Dashboard = () => {
     socket.on("connect", joinUserRoom);
 
     const handlePlanUpdated = (data) => {
-      syncAll();
-      fetchPlanLimits(user.id);
+      // Immediately update user plan in state and localStorage (optimistic)
+      if (data && data.plan) {
+        setUser(prev => {
+          const updated = { ...prev, plan: data.plan };
+          localStorage.setItem('gridlancer_user', JSON.stringify(updated));
+          return updated;
+        });
+      }
+      // Clear pending upgrade request immediately
+      setPendingRequest(null);
       setShowUpgradeModal(false);
       setShowPaymentModal(false);
+
+      // Re-sync everything from server to confirm
+      syncUserData(user.id);
+      fetchUpgradeStatus(user.id);
+      fetchPlanLimits(user.id);
+
       if (data && data.plan) {
-        showToast(`Your plan has been updated to ${data.plan}!`, 'success');
+        showToast(`🎉 Your plan has been upgraded to ${data.plan}!`, 'success');
       } else {
         showToast(`Your upgrade request was updated.`, 'success');
       }

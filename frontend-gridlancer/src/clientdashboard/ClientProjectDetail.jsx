@@ -10,7 +10,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   const [toastMessage, setToastMessage] = useState({ title: '', desc: '', type: 'success' });
   const [activeTab, setActiveTab] = useState('Overview');
   const [messages, setMessages] = useState([]);
-  
+
   // Complaint modal states
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [complaintSubject, setComplaintSubject] = useState('');
@@ -198,9 +198,10 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
       const handleNewMessage = (msg) => {
         if (msg.project_id == project.id) {
-          if (msg.sender_type !== 'client') {
-            try { notificationSound.play().catch(() => {}); } catch(e) {}
-          }
+          // Skip our own messages — they're already added locally by handleSendMessage
+          if (msg.sender_type === 'client') return;
+
+          try { notificationSound.play().catch(() => { }); } catch (e) { }
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
             return [...prev, msg];
@@ -558,27 +559,36 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       await axios.put(`http://localhost:5000/api/invoices/${invoice.id}`, { status: 'Paid' });
       setInvoices(invoices.map(inv => inv.id === invoice.id ? { ...inv, status: 'Paid' } : inv));
 
-      const msg = `Payment Sent: $${parseFloat(invoice.amount).toFixed(2)} for "${invoice.title}"`;
-      const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
-        sender_type: 'client',
-        sender_id: client.id,
-        message: msg
-      });
-
-      setMessages(prev => [...prev, {
-        id: res.data.messageId,
-        sender_type: 'client',
-        sender_id: client.id,
-        message: msg,
-        created_at: new Date().toISOString()
-      }]);
-      previousMessageCount.current += 1;
+      // Show success toast immediately
       setToastMessage({
         title: 'Payment Successful',
         desc: `Securely paid $${parseFloat(invoice.amount).toFixed(2)} for "${invoice.title}".`,
         type: 'success'
       });
       setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+
+      // Try to send a chat message about the payment (non-blocking)
+      try {
+        const msg = `Payment Sent: $${parseFloat(invoice.amount).toFixed(2)} for "${invoice.title}"`;
+        const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
+          sender_type: 'client',
+          sender_id: client.id,
+          message: msg
+        });
+
+        setMessages(prev => [...prev, {
+          id: res.data.messageId,
+          sender_type: 'client',
+          sender_id: client.id,
+          message: msg,
+          created_at: new Date().toISOString()
+        }]);
+        previousMessageCount.current += 1;
+      } catch (msgErr) {
+        // Message failed (e.g. Starter plan), but payment was successful
+        console.log('Payment chat notification skipped:', msgErr.response?.data?.message || msgErr.message);
+      }
     } catch (err) {
       console.error("Payment failed", err);
       setToastMessage({
@@ -587,7 +597,6 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
         type: 'error'
       });
       setShowToast(true);
-    } finally {
       setTimeout(() => setShowToast(false), 5000);
     }
   };
@@ -596,7 +605,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
     if (project.freelancerPlan === 'Starter') {
       setToastMessage({
         title: '🔒 Starter Limit',
-        desc: 'Video calling is locked because your freelancer is on the Starter plan. Ask them to upgrade to Pro/Agency to unlock video meetings.',
+        desc: 'Video calling is locked because your freelancer is on the Starter plan. Ask them to upgrade to Pro/Agency to unlock it.',
         type: 'error'
       });
       setShowToast(true);
@@ -613,7 +622,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       const roomName = `gridlancer-project-${hashHex.substring(0, 24)}`;
-      
+
       socket.emit("start_meeting", {
         projectId: project.id,
         projectTitle: project.title || project.name,
@@ -679,8 +688,8 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
             📋 Report Status
           </button>
           <div className={`px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider ${project.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-              project.status === 'In Progress' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            project.status === 'In Progress' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
+              'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             }`}>
             {project.status}
           </div>
@@ -1134,8 +1143,8 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
                 ) : (
                   <div className="space-y-4">
                     {complaints.map((comp) => (
-                      <div 
-                        key={comp.id} 
+                      <div
+                        key={comp.id}
                         className="p-5 rounded-2xl border bg-slate-950/40 border-slate-800 transition-all"
                       >
                         <div className="flex justify-between items-start mb-3">
@@ -1144,18 +1153,17 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
                             <h4 className="text-sm font-bold text-slate-200 mt-0.5">{comp.subject}</h4>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                              comp.status === 'Resolved' 
-                                ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                            <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${comp.status === 'Resolved'
+                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                                 : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 animate-pulse'
-                            }`}>
+                              }`}>
                               {comp.status}
                             </span>
                           </div>
                         </div>
 
                         <p className="text-xs text-slate-400 whitespace-pre-wrap leading-relaxed bg-slate-900/50 p-3 rounded-xl border border-slate-850/60 mb-3">{comp.description}</p>
-                        
+
                         {comp.status === 'Resolved' && comp.admin_response && (
                           <div className="bg-indigo-950/20 border border-indigo-500/15 rounded-xl p-4 mb-3">
                             <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Admin Response</span>

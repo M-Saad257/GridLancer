@@ -691,9 +691,10 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
       const handleNewMessage = (msg) => {
         if (msg.project_id == project.id) {
-          if (msg.sender_type === 'client') {
-            try { notificationSound.play().catch(() => {}); } catch(e) {}
-          }
+          // Skip our own messages — they're already added locally by handleSendMessage
+          if (msg.sender_type === 'freelancer') return;
+          
+          try { notificationSound.play().catch(() => {}); } catch(e) {}
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
             return [...prev, msg];
