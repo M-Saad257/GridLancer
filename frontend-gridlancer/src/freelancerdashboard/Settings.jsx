@@ -98,16 +98,16 @@ const Settings = ({ user, onUserUpdate }) => {
 
   return (
     <div className="max-w-3xl mx-auto w-full animate-[fadeIn_0.3s_ease-out]">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">Profile Settings</h2>
-        <p className="text-slate-400 font-medium">Manage your personal information and security preferences.</p>
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">Profile Settings</h2>
+        <p className="text-sm sm:text-base text-slate-400 font-medium">Manage your personal information and security preferences.</p>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-xl overflow-hidden p-8">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden p-4 sm:p-8">
         {error && <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm font-semibold">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center gap-6 mb-8">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 border-4 border-slate-800 shadow-lg shadow-purple-500/20 flex items-center justify-center font-bold text-white text-3xl overflow-hidden relative">
               {formData.image ? (
                 <img src={formData.image} alt="Avatar" className="w-full h-full object-cover" />
@@ -155,16 +155,16 @@ const Settings = ({ user, onUserUpdate }) => {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-4 pt-6 mt-4 border-t border-slate-800">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 mt-4 border-t border-slate-800">
             {isSaved && <span className="text-emerald-400 font-semibold text-sm animate-[fadeIn_0.2s_ease-out]">Changes saved successfully!</span>}
-            <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 cursor-pointer">
+            <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 sm:px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 cursor-pointer w-full sm:w-auto">
               Save Profile
             </button>
           </div>
         </form>
       </div>
 
-      <div className="mt-8 bg-rose-500/5 border border-rose-500/20 rounded-3xl p-8 relative overflow-hidden group">
+      <div className="mt-6 sm:mt-8 bg-rose-500/5 border border-rose-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-8 relative overflow-hidden group">
         <h3 className="text-xl font-bold text-rose-500 mb-2">Danger Zone</h3>
         <p className="text-slate-400 font-medium mb-6">Permanently delete your account and all associated data (clients, projects, messages, etc). This cannot be undone.</p>
         <button
@@ -183,7 +183,7 @@ const Settings = ({ user, onUserUpdate }) => {
       `}</style>
 
       {/* Toast Notification */}
-      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-4 right-4 sm:bottom-8 sm:right-8 left-4 sm:left-auto z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
         <div className={`bg-slate-900 border ${toastMessage.type === 'success' ? 'border-emerald-500/50 shadow-emerald-500/20' : 'border-rose-500/50 shadow-rose-500/20'} shadow-2xl rounded-2xl p-5 pr-12 flex items-start gap-4 relative`}>
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
             {toastMessage.type === 'success' ? (

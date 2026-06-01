@@ -4,21 +4,21 @@ import { useNavigate } from 'react-router-dom';
 const Pricing = () => {
   const navigate = useNavigate();
   return (
-    <section id="pricing" className="py-24 bg-slate-950 relative overflow-hidden">
+    <section id="pricing" className="py-16 sm:py-24 bg-slate-950 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">Simple, transparent pricing</h2>
-          <p className="mt-4 text-lg text-slate-400">Start for free, upgrade when you need more power.</p>
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white tracking-tight">Simple, transparent pricing</h2>
+          <p className="mt-4 text-base sm:text-lg text-slate-400">Start for free, upgrade when you need more power.</p>
         </div>
         
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {/* Free Plan */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 flex flex-col hover:border-slate-700 transition-colors">
-            <h3 className="text-2xl font-semibold text-white">Starter</h3>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 flex flex-col hover:border-slate-700 transition-colors">
+            <h3 className="text-xl sm:text-2xl font-semibold text-white">Starter</h3>
             <p className="mt-4 text-slate-400">Perfect for new freelancers.</p>
             <p className="mt-6 flex items-baseline">
-              <span className="text-5xl font-extrabold text-white">$0</span>
+              <span className="text-4xl sm:text-5xl font-extrabold text-white">$0</span>
               <span className="text-xl font-medium text-slate-500 ml-1">/forever</span>
             </p>
             <ul className="mt-8 space-y-4 flex-grow text-sm">
@@ -32,15 +32,15 @@ const Pricing = () => {
           </div>
           
           {/* Pro Plan */}
-          <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-10 flex flex-col relative transform md:-translate-y-4 shadow-2xl shadow-indigo-500/20">
+          <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-6 sm:p-10 flex flex-col relative transform md:-translate-y-4 shadow-2xl shadow-indigo-500/20">
             <div className="absolute -top-px left-10 right-10 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
             <div className="absolute top-6 right-6">
               <span className="bg-indigo-500/20 border border-indigo-500/50 text-indigo-300 text-xs font-bold uppercase tracking-wider py-1.5 px-3 rounded-full">Most Popular</span>
             </div>
-            <h3 className="text-2xl font-semibold text-white">Pro</h3>
+            <h3 className="text-xl sm:text-2xl font-semibold text-white">Pro</h3>
             <p className="mt-4 text-slate-400">For active growing professionals.</p>
             <p className="mt-6 flex items-baseline">
-              <span className="text-5xl font-extrabold text-white">$29</span>
+              <span className="text-4xl sm:text-5xl font-extrabold text-white">$29</span>
               <span className="text-xl font-medium text-slate-500 ml-1">/mo</span>
             </p>
             <ul className="mt-8 space-y-4 flex-grow text-sm">
@@ -57,11 +57,11 @@ const Pricing = () => {
           </div>
  
           {/* Agency Plan */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 flex flex-col hover:border-slate-700 transition-colors">
-            <h3 className="text-2xl font-semibold text-white">Agency</h3>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 flex flex-col hover:border-slate-700 transition-colors">
+            <h3 className="text-xl sm:text-2xl font-semibold text-white">Agency</h3>
             <p className="mt-4 text-slate-400">For large teams with advanced needs.</p>
             <p className="mt-6 flex items-baseline">
-              <span className="text-5xl font-extrabold text-white">$79</span>
+              <span className="text-4xl sm:text-5xl font-extrabold text-white">$79</span>
               <span className="text-xl font-medium text-slate-500 ml-1">/mo</span>
             </p>
             <ul className="mt-8 space-y-4 flex-grow text-sm">

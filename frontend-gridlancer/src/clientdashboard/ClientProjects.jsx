@@ -51,10 +51,10 @@ const ClientProjects = ({ client }) => {
 
   return (
     <div className="animate-[fadeIn_0.3s_ease-out]">
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-0 mb-6 sm:mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">My Projects</h2>
-          <p className="text-slate-400 font-medium">Track your active projects and communicate with your freelancer.</p>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">My Projects</h2>
+          <p className="text-sm sm:text-base text-slate-400 font-medium">Track your active projects and communicate with your freelancer.</p>
         </div>
       </div>
 
@@ -71,7 +71,7 @@ const ClientProjects = ({ client }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map(project => (
-            <div key={project.id} onClick={() => setSelectedProject(project)} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl group hover:border-indigo-500/50 transition-all cursor-pointer relative overflow-hidden flex flex-col min-h-[220px]">
+            <div key={project.id} onClick={() => setSelectedProject(project)} className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl group hover:border-indigo-500/50 transition-all cursor-pointer relative overflow-hidden flex flex-col min-h-[200px] sm:min-h-[220px]">
               <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${project.color || 'from-indigo-500 to-purple-500'}`}></div>
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-[40px] rounded-full group-hover:scale-150 transition-transform duration-500 pointer-events-none"></div>
               

@@ -658,36 +658,38 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   };
 
   return (
-    <div className="flex flex-col h-full animate-[fadeIn_0.3s_ease-out]">
+    <div className="flex flex-col xl:h-full animate-[fadeIn_0.3s_ease-out]">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700 shadow-lg">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <div>
-          <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">Project</div>
-          <h2 className="text-3xl font-bold text-white">{project.title || project.name}</h2>
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700 shadow-lg">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div>
+            <div className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">Project</div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">{project.title || project.name}</h2>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex flex-nowrap items-center gap-3 w-full sm:w-auto sm:ml-auto">
           <button
             onClick={handleStartMeeting}
-            className="px-4 py-2 bg-indigo-650 hover:bg-indigo-550 border border-indigo-500/30 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/5 flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-4 py-2 bg-indigo-650 hover:bg-indigo-550 border border-indigo-500/30 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/5 flex items-center justify-center gap-1.5"
           >
             📹 Start Meeting
           </button>
           <button
             onClick={() => setShowComplaintModal(true)}
-            className="px-4 py-2 bg-rose-500/15 hover:bg-rose-500 border border-rose-500/30 text-rose-450 hover:text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-rose-500/5"
+            className="flex-1 sm:flex-none px-4 py-2 bg-rose-500/15 hover:bg-rose-500 border border-rose-500/30 text-rose-450 hover:text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-rose-500/5 flex items-center justify-center gap-1.5"
           >
-            🚩 Report Freelancer
+            🚩 Report
           </button>
           <button
             onClick={() => setShowComplaintsStatusModal(true)}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-350 hover:text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-350 hover:text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5"
           >
-            📋 Report Status
+            📋 Status
           </button>
-          <div className={`px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider ${project.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+          <div className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-[10px] sm:text-sm font-bold uppercase tracking-wider text-center flex items-center justify-center ${project.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
             project.status === 'In Progress' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
               'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             }`}>
@@ -696,18 +698,18 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
         </div>
       </div>
 
-      <div className="flex flex-1 gap-6 min-h-0 overflow-hidden">
+      <div className="flex flex-col xl:flex-row flex-1 gap-6 min-h-0 xl:overflow-hidden pb-4 xl:pb-0 custom-scrollbar">
         {/* Project Content */}
-        <div className={`${project.freelancerPlan === 'Starter' ? 'flex-1' : 'flex-[3]'} bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col shadow-xl relative overflow-hidden`}>
+        <div className={`${project.freelancerPlan === 'Starter' ? 'flex-1' : 'flex-[3]'} bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-8 flex flex-col shadow-xl relative xl:overflow-hidden shrink-0`}>
           <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${project.color || 'from-indigo-500 to-purple-500'}`}></div>
 
           {/* Tabs */}
-          <div className="flex gap-6 border-b border-slate-800 mb-6">
+          <div className="flex gap-2 sm:gap-6 border-b border-slate-800 mb-6 overflow-x-auto pb-2 custom-scrollbar">
             {['Overview', 'Activity', 'Files & Assets', 'Invoices'].map(tab => (
               <div
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-sm font-bold cursor-pointer transition-colors relative ${activeTab === tab ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`pb-4 text-xs sm:text-sm font-bold cursor-pointer transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 {tab}
                 {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500 rounded-t-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>}
@@ -716,7 +718,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="flex-1 xl:overflow-y-auto overflow-visible pr-2 custom-scrollbar">
             {activeTab === 'Overview' && (
               <div className="space-y-8">
                 <div>
@@ -787,8 +789,8 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
             {activeTab === 'Activity' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-bold text-white">Project Activity & Tasks</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">Project Activity & Tasks</h3>
                   <div className="text-sm font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-lg">
                     Current Progress: {project.progress}%
                   </div>
@@ -907,7 +909,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
         {/* Freelancer Discussion Sidebar */}
         {project.freelancerPlan !== 'Starter' && (
-          <div className="flex-[1.5] bg-slate-900 border border-slate-800 rounded-3xl flex flex-col shadow-xl overflow-hidden min-w-[300px]">
+          <div className="flex-[1.5] bg-slate-900 border border-slate-800 rounded-3xl flex flex-col shadow-xl overflow-hidden min-w-[300px] shrink-0 h-[80vh] xl:h-auto">
             <div className="p-6 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold text-white">Project Discussion</h3>

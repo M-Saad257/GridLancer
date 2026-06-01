@@ -80,35 +80,35 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="py-32 bg-slate-950 relative overflow-hidden">
+    <section id="features" className="py-16 sm:py-32 bg-slate-950 relative overflow-hidden">
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent"></div>
       
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20 relative z-10">
-          <div className="text-indigo-400 font-extrabold uppercase tracking-widest text-sm mb-4">Powerful Capabilities</div>
-          <h2 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
+          <div className="text-indigo-400 font-extrabold uppercase tracking-widest text-xs sm:text-sm mb-4">Powerful Capabilities</div>
+          <h2 className="text-2xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
             Everything you need to <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">scale</span>
           </h2>
-          <p className="mt-6 text-xl text-slate-400 font-light">
+          <p className="mt-4 sm:mt-6 text-base sm:text-xl text-slate-400 font-light">
             We stripped away the clutter and built a suite of features designed specifically for modern service businesses.
           </p>
         </div>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
           {features.map((f, i) => (
-            <div key={i} className="group relative bg-slate-900 border border-slate-800 p-8 rounded-3xl hover:border-slate-600 transition-all duration-500 overflow-hidden cursor-pointer">
+            <div key={i} className="group relative bg-slate-900 border border-slate-800 p-5 sm:p-8 rounded-3xl hover:border-slate-600 transition-all duration-500 overflow-hidden cursor-pointer">
               {/* Hover Glow Effect inside card */}
               <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${f.color} blur-[60px] opacity-0 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none rounded-full`}></div>
               
               <div className="relative z-10">
-                <div className={`w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500`}>
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center mb-6 sm:mb-8 shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500`}>
                   {/* Fixed disappearing icon by using solid color shifts instead of background clipping */}
                   <div className={`text-slate-400 ${f.hoverColor} transition-colors duration-300 drop-shadow-md`}>
                     {React.cloneElement(f.icon, { className: "w-7 h-7" })}
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3 tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-300 transition-all">{f.title}</h3>
-                <p className="text-slate-400 leading-relaxed font-light text-lg">{f.desc}</p>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-3 tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-300 transition-all">{f.title}</h3>
+                <p className="text-slate-400 leading-relaxed font-light text-base sm:text-lg">{f.desc}</p>
               </div>
             </div>
           ))}

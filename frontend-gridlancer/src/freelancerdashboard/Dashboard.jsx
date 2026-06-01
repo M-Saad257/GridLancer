@@ -14,6 +14,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Overview');
   const [projectCount, setProjectCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [planVersion, setPlanVersion] = useState(0);
   const navigate = useNavigate();
 
   const [pendingProjectId, setPendingProjectId] = useState(null);
@@ -186,8 +187,11 @@ const Dashboard = () => {
       fetchUpgradeStatus(user.id);
       fetchPlanLimits(user.id);
 
+      // Bump planVersion to force Overview to re-fetch analytics
+      setPlanVersion(prev => prev + 1);
+
       if (data && data.plan) {
-        showToast(`🎉 Your plan has been upgraded to ${data.plan}!`, 'success');
+        showToast(`🎉 Your plan has been changed to ${data.plan}!`, 'success');
       } else {
         showToast(`Your upgrade request was updated.`, 'success');
       }
@@ -257,12 +261,14 @@ const Dashboard = () => {
         requested_plan: planName
       });
       if (res.data.instant) {
-        showToast(res.data.message || 'Plan updated to Starter successfully.', 'success');
-        // Update user state and local storage
-        const updatedUser = { ...user, plan: 'Starter' };
+        showToast(res.data.message || `Plan updated to ${res.data.plan || planName} successfully.`, 'success');
+        // Update user state and local storage with the new plan
+        const updatedUser = { ...user, plan: res.data.plan || planName };
         setUser(updatedUser);
         localStorage.setItem('gridlancer_user', JSON.stringify(updatedUser));
         await fetchUpgradeStatus(user.id);
+        await fetchPlanLimits(user.id);
+        setPlanVersion(prev => prev + 1);
         setShowUpgradeModal(false);
       } else {
         showToast(res.data.message || 'Upgrade request created!', 'success');
@@ -301,7 +307,7 @@ const Dashboard = () => {
 
       {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed top-6 right-6 z-50 px-5 py-4 rounded-2xl border shadow-xl flex items-center gap-3 animate-bounce bg-slate-900 border-slate-800">
+        <div className="fixed top-4 right-4 sm:top-6 sm:right-6 left-4 sm:left-auto z-50 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl border shadow-xl flex items-center gap-3 animate-bounce bg-slate-900 border-slate-800">
           <div className={`w-3 h-3 rounded-full ${toast.type === 'success' ? 'bg-indigo-500' : 'bg-red-500'}`}></div>
           <p className="text-sm font-semibold">{toast.message}</p>
         </div>
@@ -310,7 +316,7 @@ const Dashboard = () => {
       {/* Mobile Header */}
       <div className="md:hidden h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-6 z-20 shrink-0">
         <div className="font-bold text-white text-lg flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">CD</div>
+          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">GL</div>
           GridLancer
         </div>
         <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
@@ -427,8 +433,8 @@ const Dashboard = () => {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6 md:p-10 flex flex-col z-10 overflow-y-auto custom-scrollbar">
-        {activeTab === 'Overview' && <Overview user={user} onNotificationClick={handleNotificationClick} planLimits={planLimits} onUpgrade={handleUpgradeClick} />}
+      <div className="flex-1 p-3 sm:p-6 md:p-10 flex flex-col z-10 overflow-y-auto custom-scrollbar">
+        {activeTab === 'Overview' && <Overview user={user} onNotificationClick={handleNotificationClick} planLimits={planLimits} onUpgrade={handleUpgradeClick} planVersion={planVersion} />}
         {activeTab === 'Projects' && <Projects user={user} pendingProjectId={pendingProjectId} onClearPending={() => setPendingProjectId(null)} planLimits={planLimits} onUpgrade={handleUpgradeClick} onProjectChange={() => fetchPlanLimits(user.id)} />}
         {activeTab === 'Clients' && user.role !== 'member' && <Clients user={user} planLimits={planLimits} onUpgrade={handleUpgradeClick} onClientChange={() => fetchPlanLimits(user.id)} />}
         {activeTab === 'Team' && (
@@ -455,7 +461,7 @@ const Dashboard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowUpgradeModal(false)}></div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 max-w-4xl w-full relative z-10 max-h-[90vh] overflow-y-auto custom-scrollbar animate-fadeIn shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 max-w-4xl w-full relative z-10 max-h-[90vh] overflow-y-auto custom-scrollbar animate-fadeIn shadow-2xl">
             <button
               onClick={() => setShowUpgradeModal(false)}
               className="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-750 p-2 rounded-full transition-all cursor-pointer"
@@ -464,7 +470,7 @@ const Dashboard = () => {
             </button>
 
             <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-black text-white">Upgrade Your GridLancer Account</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white">Upgrade Your GridLancer Account</h2>
               <p className="text-sm text-slate-400 mt-2">Unlock unlimited clients, projects, professional PDF invoices, and real-time support.</p>
             </div>
 
@@ -627,7 +633,7 @@ const Dashboard = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)}></div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full relative z-10 animate-fadeIn shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 max-w-md w-full relative z-10 animate-fadeIn shadow-2xl">
             <button
               onClick={() => setShowPaymentModal(false)}
               className="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-750 p-2 rounded-full transition-all cursor-pointer"
@@ -691,7 +697,7 @@ const Dashboard = () => {
       {/* BAN OVERLAY MODAL */}
       {isBanned && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-red-500/20 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative">
+          <div className="bg-slate-900 border border-red-500/20 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full text-center shadow-2xl relative">
             <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/10">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>

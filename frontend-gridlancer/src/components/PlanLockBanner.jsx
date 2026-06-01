@@ -20,9 +20,9 @@ const PlanLockBanner = ({ feature, description, requiredPlan = 'Pro', onUpgrade,
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-white truncate">
+          <p className="text-xs font-bold text-white sm:truncate">
             🔒 {feature}
-            <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+            <span className="block mt-1 w-max sm:inline-block sm:mt-0 sm:ml-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
               {requiredPlan}
             </span>
           </p>

@@ -404,7 +404,7 @@ const AdminDashboard = () => {
       {/* Mobile Header */}
       <div className="md:hidden h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-6 z-20 shrink-0">
         <div className="font-bold text-white text-lg flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">CD</div>
+          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">GL</div>
           GridLancer Admin
         </div>
         <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
@@ -513,8 +513,8 @@ const AdminDashboard = () => {
             {activeTab === 'Overview' && (
               <div className="space-y-8 animate-fadeIn">
                 {/* Stats cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="bg-slate-900 border border-slate-850 p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  <div className="bg-slate-900 border border-slate-850 p-4 sm:p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
                     <div className="space-y-1 relative z-10">
                       <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Active Projects</div>
                       <div className="text-3xl font-black text-white">{projects.length}</div>
@@ -524,7 +524,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-850 p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
+                  <div className="bg-slate-900 border border-slate-850 p-4 sm:p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
                     <div className="space-y-1 relative z-10">
                       <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Registered Freelancers</div>
                       <div className="text-3xl font-black text-white">{freelancers.length}</div>
@@ -534,7 +534,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-850 p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
+                  <div className="bg-slate-900 border border-slate-850 p-4 sm:p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
                     <div className="space-y-1 relative z-10">
                       <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Connected Clients</div>
                       <div className="text-3xl font-black text-white">{clients.length}</div>
@@ -544,7 +544,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-850 p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
+                  <div className="bg-slate-900 border border-slate-850 p-4 sm:p-6 rounded-2xl flex items-center justify-between group hover:border-slate-800 transition-all shadow-lg relative overflow-hidden">
                     <div className="space-y-1 relative z-10">
                       <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Upgrades</div>
                       <div className="text-3xl font-black text-white">{upgradeRequests.filter(r => r.status === 'Pending').length}</div>
@@ -556,9 +556,9 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Subcontent grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                   {/* Activity log timeline */}
-                  <div className="bg-slate-900 border border-slate-850 rounded-2xl p-6 lg:col-span-2">
+                  <div className="bg-slate-900 border border-slate-850 rounded-2xl p-4 sm:p-6 lg:col-span-2">
                     <h3 className="text-base font-bold text-slate-100 mb-4 flex items-center gap-2">
                       <div className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-ping"></div>
                       Recent System Activities
@@ -585,7 +585,7 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Plan pricing card limits summary info */}
-                  <div className="bg-gradient-to-br from-indigo-900/10 via-purple-900/5 to-slate-900 border border-indigo-950 rounded-2xl p-6 flex flex-col justify-between">
+                  <div className="bg-gradient-to-br from-indigo-900/10 via-purple-900/5 to-slate-900 border border-indigo-950 rounded-2xl p-4 sm:p-6 flex flex-col justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 uppercase tracking-wide mb-3">Subscription Plans Reference</h3>
                       <div className="space-y-3.5 text-xs">

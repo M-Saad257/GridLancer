@@ -123,13 +123,13 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none"></div>
       
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
-        <Link to="/" className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">GridLancer</Link>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">Sign in to your account</h2>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10 px-2 sm:px-0">
+        <Link to="/" className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">GridLancer</Link>
+        <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-white">Sign in to your account</h2>
         <p className="mt-2 text-center text-sm text-slate-400">
           Or{' '}
           <Link to={plan ? `/signup?plan=${plan}` : "/signup"} className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
@@ -138,8 +138,8 @@ const Login = () => {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-slate-900 py-8 px-4 shadow-2xl shadow-indigo-500/10 sm:rounded-3xl sm:px-10 border border-slate-800">
+      <div className="mt-6 sm:mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="bg-slate-900 py-6 sm:py-8 px-4 shadow-2xl shadow-indigo-500/10 rounded-2xl sm:rounded-3xl sm:px-10 border border-slate-800">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-300">
@@ -177,7 +177,7 @@ const Login = () => {
       </div>
 
       {/* Toast Notification */}
-      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-4 right-4 sm:bottom-8 sm:right-8 left-4 sm:left-auto z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
         <div className={`bg-slate-900 border ${toastMessage.type === 'success' ? 'border-emerald-500/50 shadow-emerald-500/20' : 'border-rose-500/50 shadow-rose-500/20'} shadow-2xl rounded-2xl p-5 pr-12 flex items-start gap-4 relative`}>
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
             {toastMessage.type === 'success' ? (
@@ -199,7 +199,7 @@ const Login = () => {
       {/* BAN MODAL (MESSAGE BOX) */}
       {banModal.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-red-500/20 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative text-white">
+          <div className="bg-slate-900 border border-red-500/20 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full text-center shadow-2xl relative text-white">
             <button 
               onClick={() => setBanModal(prev => ({ ...prev, show: false }))}
               className="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-750 p-2 rounded-full transition-all cursor-pointer"

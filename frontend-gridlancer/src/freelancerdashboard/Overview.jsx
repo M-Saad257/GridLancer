@@ -5,7 +5,7 @@ import PlanLockBanner from '../components/PlanLockBanner';
 
 const notificationSound = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU" + 'A'.repeat(500));
 
-const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
+const Overview = ({ user, onNotificationClick, planLimits, onUpgrade, planVersion }) => {
   const [stats, setStats] = useState({
     totalRevenue: 0,
     activeProjects: 0,
@@ -28,19 +28,23 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
     try {
       if (!isBackground) setLoading(true);
 
-      // 1. Fetch Stats (plan-gated)
-      try {
-        const statsRes = await axios.get(`http://localhost:5000/api/users/${user.id}/stats`);
-        const authenticStats = statsRes.data;
-        setAnalyticsBlocked(false);
-        setStats({
-          totalRevenue: authenticStats.totalRevenue || 0,
-          activeProjects: authenticStats.activeProjects || 0,
-          pendingInvoices: authenticStats.pendingInvoices || 0
-        });
-      } catch (statsErr) {
-        if (statsErr.response?.status === 403 && statsErr.response?.data?.upgrade) {
-          setAnalyticsBlocked(true);
+      // 1. Fetch Stats (plan-gated) — skip API call for Starter to avoid 403 console noise
+      if (isStarterPlan) {
+        setAnalyticsBlocked(true);
+      } else {
+        try {
+          const statsRes = await axios.get(`http://localhost:5000/api/users/${user.id}/stats`);
+          const authenticStats = statsRes.data;
+          setAnalyticsBlocked(false);
+          setStats({
+            totalRevenue: authenticStats.totalRevenue || 0,
+            activeProjects: authenticStats.activeProjects || 0,
+            pendingInvoices: authenticStats.pendingInvoices || 0
+          });
+        } catch (statsErr) {
+          if (statsErr.response?.status === 403 && statsErr.response?.data?.upgrade) {
+            setAnalyticsBlocked(true);
+          }
         }
       }
 
@@ -170,7 +174,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
       socket.off("stats_updated", handleStatsUpdate);
       socket.off("notifications_updated", handleNotificationsUpdate);
     };
-  }, [user?.id]);
+  }, [user?.id, planLimits?.plan, planVersion]);
 
   return (
     <>
@@ -230,7 +234,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
             { label: 'Active Tasks', value: loading ? '...' : (stats.pendingInvoices || 0).toString(), color: 'text-amber-400', icon: '✅' },
             { label: 'Team Role', value: 'Member', color: 'text-purple-400', icon: '👤' }
           ].map((stat, i) => (
-            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-pointer">
+            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-pointer">
               <div className="absolute -right-6 -top-6 w-32 h-32 bg-slate-800 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
               <div className="text-sm font-semibold text-slate-400 mb-2 relative z-10">{stat.label}</div>
               <div className="text-4xl font-extrabold text-white relative z-10 flex items-end gap-3">
@@ -241,7 +245,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
         ) : analyticsBlocked || isStarterPlan ? (
           <>
             {['Total Revenue', 'Active Projects', 'Pending Invoices'].map((label, i) => (
-              <div key={i} className="bg-slate-900 border border-indigo-500/20 rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center gap-3">
+              <div key={i} className="bg-slate-900 border border-indigo-500/20 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col items-center justify-center text-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
                   <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -257,10 +261,10 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
           </>
         ) : (
           [{ label: 'Total Revenue', value: loading ? '...' : `$${stats.totalRevenue.toLocaleString()}`, change: stats.totalRevenue > 0 ? '+12%' : '0%', color: 'text-emerald-400' },
-           { label: 'Active Projects', value: loading ? '...' : stats.activeProjects.toString(), change: stats.activeProjects > 0 ? `+${stats.activeProjects}` : '0', color: 'text-indigo-400' },
-           { label: 'Pending Invoices', value: loading ? '...' : stats.pendingInvoices.toString(), change: stats.pendingInvoices > 0 ? `+${stats.pendingInvoices}` : '0', color: 'text-rose-400' }
+          { label: 'Active Projects', value: loading ? '...' : stats.activeProjects.toString(), change: stats.activeProjects > 0 ? `+${stats.activeProjects}` : '0', color: 'text-indigo-400' },
+          { label: 'Pending Invoices', value: loading ? '...' : stats.pendingInvoices.toString(), change: stats.pendingInvoices > 0 ? `+${stats.pendingInvoices}` : '0', color: 'text-rose-400' }
           ].map((stat, i) => (
-            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-pointer">
+            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-pointer">
               <div className="absolute -right-6 -top-6 w-32 h-32 bg-slate-800 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
               <div className="text-sm font-semibold text-slate-400 mb-2 relative z-10">{stat.label}</div>
               <div className="text-4xl font-extrabold text-white relative z-10 flex items-end gap-3">
@@ -277,7 +281,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade }) => {
       {/* Chart & Activity */}
       <div className="flex flex-col lg:flex-row gap-6 mt-4 flex-1 min-h-[400px]">
         {user?.role !== 'member' && (
-          <div className="flex-[2] bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl flex flex-col relative overflow-hidden group hover:border-slate-700 transition-colors">
+          <div className="flex-[2] bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-8 shadow-xl flex flex-col relative overflow-hidden group hover:border-slate-700 transition-colors">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none"></div>
 
             <div className="flex justify-between items-center mb-8 relative z-10">

@@ -63,10 +63,10 @@ const Contact = () => {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
       <Navbar />
 
-      <div className="flex-grow pt-32 pb-20 px-6 lg:px-8 flex items-center justify-center relative z-10">
-        <div className="max-w-3xl w-full bg-slate-900 p-12 rounded-3xl shadow-2xl shadow-indigo-500/10 border border-slate-800 text-center">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-4">Contact Us</h1>
-          <p className="text-lg text-slate-400 mb-10 font-light">We'd love to hear from you. Please fill out the form below or reach out to us at support@gridlancer.com.</p>
+      <div className="flex-grow pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 flex items-center justify-center relative z-10">
+        <div className="max-w-3xl w-full bg-slate-900 p-5 sm:p-12 rounded-2xl sm:rounded-3xl shadow-2xl shadow-indigo-500/10 border border-slate-800 text-center">
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-3 sm:mb-4">Contact Us</h1>
+          <p className="text-sm sm:text-lg text-slate-400 mb-6 sm:mb-10 font-light">We'd love to hear from you. Please fill out the form below or reach out to us at support@gridlancer.com.</p>
 
           <form onSubmit={handleSubmit} className="space-y-6 text-left max-w-lg mx-auto">
             {/* FormSubmit config to prevent captcha redirection when possible */}
@@ -85,7 +85,7 @@ const Contact = () => {
               <label htmlFor="message" className="block text-sm font-semibold text-slate-300">Message</label>
               <textarea id="message" name="message" rows="5" required className="mt-2 block w-full px-4 py-3 border border-slate-700 rounded-xl shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-slate-500 bg-slate-950 resize-none" placeholder="How can we help?"></textarea>
             </div>
-            <button type="submit" disabled={isSubmitting} className="w-full mt-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-4 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+            <button type="submit" disabled={isSubmitting} className="w-full mt-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm sm:text-base">
               {isSubmitting ? 'Sending...' : 'Send Message'}
             </button>
           </form>
@@ -94,7 +94,7 @@ const Contact = () => {
       <Footer />
 
       {/* Toast Notification */}
-      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-4 right-4 sm:bottom-8 sm:right-8 left-4 sm:left-auto z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
         <div className={`bg-slate-900 border ${toastMessage.type === 'success' ? 'border-emerald-500/50 shadow-emerald-500/20' : 'border-rose-500/50 shadow-rose-500/20'} shadow-2xl rounded-2xl p-5 pr-12 flex items-start gap-4 relative`}>
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
             {toastMessage.type === 'success' ? (

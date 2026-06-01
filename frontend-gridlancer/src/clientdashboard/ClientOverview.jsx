@@ -68,7 +68,7 @@ const ClientOverview = ({ client }) => {
 
   return (
     <div className="animate-[fadeIn_0.3s_ease-out] flex-1 flex flex-col h-full min-h-0">
-      <h2 className="text-3xl font-bold text-white mb-2 flex-shrink-0">Welcome back, {client.name} 👋</h2>
+      <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2 flex-shrink-0">Welcome back, {client.name} 👋</h2>
       <p className="text-slate-400 font-medium mb-8 flex-shrink-0">Here is an overview of your projects with your freelancer.</p>
 
       {/* Stats Grid */}
@@ -93,8 +93,8 @@ const ClientOverview = ({ client }) => {
 
       {/* Recent Invoices Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl flex-1 flex flex-col min-h-0">
-          <div className="flex justify-between items-center mb-6 flex-shrink-0">
-            <h3 className="text-xl font-bold text-white">Recent Invoices</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6 flex-shrink-0">
+            <h3 className="text-lg sm:text-xl font-bold text-white">Recent Invoices</h3>
           </div>
 
           <div className="overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 flex-1 min-h-0">

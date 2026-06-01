@@ -109,7 +109,7 @@ const ClientDashboard = () => {
       {/* Mobile Header */}
       <div className="md:hidden h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-6 z-20 shrink-0">
         <div className="font-bold text-white text-lg flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">CD</div>
+          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">GL</div>
           GridLancer
         </div>
         <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
@@ -169,7 +169,7 @@ const ClientDashboard = () => {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6 md:p-10 flex flex-col z-10 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 p-3 sm:p-6 md:p-10 flex flex-col z-10 overflow-y-auto custom-scrollbar">
         {activeTab === 'Overview' && <ClientOverview client={client} />}
         {activeTab === 'My Projects' && <ClientProjects client={client} />}
         {activeTab === 'Settings' && <ClientSettings client={client} onClientUpdate={setClient} />}
@@ -178,7 +178,7 @@ const ClientDashboard = () => {
       {/* BAN OVERLAY MODAL */}
       {isBanned && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-red-500/20 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative">
+          <div className="bg-slate-900 border border-red-500/20 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full text-center shadow-2xl relative">
             <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/10">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
@@ -234,7 +234,7 @@ const ClientDashboard = () => {
 
       {/* MEETING INVITE FLOATING BANNER */}
       {meetingInvite && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] max-w-lg w-[calc(100%-2rem)] md:w-full bg-slate-900/95 backdrop-blur border border-indigo-500/40 rounded-2xl p-4 shadow-[0_10px_50px_rgba(99,102,241,0.25)] flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
+        <div className="fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-lg bg-slate-900/95 backdrop-blur border border-indigo-500/40 rounded-2xl p-4 shadow-[0_10px_50px_rgba(99,102,241,0.25)] flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 animate-bounce">
               📹

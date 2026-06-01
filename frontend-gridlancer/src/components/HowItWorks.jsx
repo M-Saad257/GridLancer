@@ -65,14 +65,14 @@ const HowItWorks = () => {
   const [hoveredStep, setHoveredStep] = useState(0);
 
   return (
-    <section id="how-it-works" className="py-32 bg-slate-950 relative overflow-hidden border-t border-slate-900">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 relative">
-        <div className="text-center max-w-3xl mx-auto mb-24">
-          <div className="text-indigo-400 font-extrabold uppercase tracking-widest text-sm mb-4">Simple Process</div>
-          <h2 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
+    <section id="how-it-works" className="py-16 sm:py-32 bg-slate-950 relative overflow-hidden border-t border-slate-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-24">
+          <div className="text-indigo-400 font-extrabold uppercase tracking-widest text-xs sm:text-sm mb-4">Simple Process</div>
+          <h2 className="text-2xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight">
             How it <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">works</span>
           </h2>
-          <p className="mt-6 text-xl text-slate-400 font-light">
+          <p className="mt-4 sm:mt-6 text-base sm:text-xl text-slate-400 font-light">
             Get your clients onboarded in minutes, not days. A beautifully simple workflow.
           </p>
         </div>
@@ -93,7 +93,7 @@ const HowItWorks = () => {
              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_20px_rgba(217,70,239,1)] transition-opacity duration-300"></div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12 md:gap-8 relative z-10">
+          <div className="grid md:grid-cols-3 gap-8 md:gap-8 relative z-10">
             {steps.map((item, i) => {
               const stepNumber = parseInt(item.id);
               const isHovered = hoveredStep >= stepNumber;
@@ -119,7 +119,7 @@ const HowItWorks = () => {
                     <div className="mb-8">
                       {item.visual}
                     </div>
-                    <h3 className={`text-2xl font-bold mb-3 tracking-tight transition-colors duration-300 text-center ${isHovered ? 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400' : 'text-white'}`}>
+                    <h3 className={`text-xl sm:text-2xl font-bold mb-3 tracking-tight transition-colors duration-300 text-center ${isHovered ? 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400' : 'text-white'}`}>
                       {item.title}
                     </h3>
                     <p className="text-slate-400 leading-relaxed font-light text-center">{item.desc}</p>

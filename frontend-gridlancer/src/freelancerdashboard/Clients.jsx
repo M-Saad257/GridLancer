@@ -89,10 +89,10 @@ const Clients = ({ user }) => {
 
   return (
     <div className="animate-[fadeIn_0.3s_ease-out]">
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex justify-between items-end mb-6 sm:mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Clients</h2>
-          <p className="text-slate-400 font-medium">Manage your client relationships and their associated projects.</p>
+          <h2 className="text-xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">Clients</h2>
+          <p className="text-sm sm:text-base text-slate-400 font-medium">Manage your client relationships and their associated projects.</p>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ const Clients = ({ user }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {clients.map((client) => (
-            <div key={client.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col relative overflow-hidden group hover:border-indigo-500/50 transition-all">
+            <div key={client.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col relative overflow-hidden group hover:border-indigo-500/50 transition-all">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
               
               <button 
@@ -176,7 +176,7 @@ const Clients = ({ user }) => {
       `}</style>
 
       {/* Toast Notification */}
-      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-4 right-4 sm:bottom-8 sm:right-8 left-4 sm:left-auto z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
         <div className={`bg-slate-900 border ${toastMessage.type === 'success' ? 'border-emerald-500/50 shadow-emerald-500/20' : 'border-rose-500/50 shadow-rose-500/20'} shadow-2xl rounded-2xl p-5 pr-12 flex items-start gap-4 relative`}>
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
             {toastMessage.type === 'success' ? (

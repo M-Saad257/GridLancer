@@ -811,24 +811,26 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   };
 
   return (
-    <div className="flex flex-col h-full animate-[fadeIn_0.3s_ease-out]">
+    <div className="flex flex-col xl:h-full animate-[fadeIn_0.3s_ease-out]">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700 shadow-lg">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <div>
-          <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">{project.clientName}</div>
-          <h2 className="text-3xl font-bold text-white">{project.title || project.name}</h2>
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700 shadow-lg">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div>
+            <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">{project.clientName}</div>
+            <h2 className="text-3xl font-bold text-white">{project.title || project.name}</h2>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex flex-nowrap items-center gap-3 w-full sm:w-auto sm:ml-auto">
           <button
             onClick={handleStartMeeting}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 border border-indigo-500/30 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/5 flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-500 border border-indigo-500/30 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/5 flex items-center justify-center gap-1.5"
           >
             📹 Start Meeting
           </button>
-          <div className={`px-4 py-2 rounded-xl text-sm font-bold uppercase ${project.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+          <div className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider text-center flex items-center justify-center ${project.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
             project.status === 'In Progress' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
               'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             }`}>
@@ -837,18 +839,18 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
         </div>
       </div>
 
-      <div className="flex flex-1 gap-6 min-h-0 overflow-hidden">
+      <div className="flex flex-col xl:flex-row flex-1 gap-6 min-h-0 xl:overflow-hidden pb-4 xl:pb-0 custom-scrollbar">
         {/* Project Content */}
-        <div className="flex-[3] bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col shadow-xl relative overflow-hidden">
+        <div className="flex-[3] bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-8 flex flex-col shadow-xl relative xl:overflow-hidden shrink-0">
           <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${project.color || 'from-indigo-500 to-purple-500'}`}></div>
 
           {/* Tabs */}
-          <div className="flex gap-6 border-b border-slate-800 mb-6">
+          <div className="flex gap-2 sm:gap-6 border-b border-slate-800 mb-6 overflow-x-auto pb-2 custom-scrollbar">
             {['Overview', 'Tasks', 'Files & Assets', ...(user?.role !== 'member' ? ['Invoices', 'Settings'] : [])].map(tab => (
               <div
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-sm font-bold cursor-pointer transition-colors relative ${activeTab === tab ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`pb-4 text-sm font-bold cursor-pointer transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 {tab}
                 {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500 rounded-t-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>}
@@ -857,7 +859,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="flex-1 xl:overflow-y-auto overflow-visible pr-2 custom-scrollbar">
             {activeTab === 'Overview' && (
               <div className="space-y-2">
                 <div>
@@ -906,9 +908,6 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
                     <div className="text-center py-10 text-slate-500 italic border border-dashed border-slate-800 rounded-2xl">This project was created before default tasks were added.</div>
                   ) : (
                     tasks.map((task, index) => {
-                      // Sequential logic: 
-                      // 1. Can't check if previous is unchecked
-                      // 2. Can't uncheck if next is checked
                       const isDisabled = (!task.is_completed && index > 0 && !tasks[index - 1].is_completed) ||
                         (task.is_completed && index < tasks.length - 1 && tasks[index + 1].is_completed);
 
@@ -946,7 +945,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
                       onChange={handleFileUpload}
                       disabled={isUploading}
                     />
-                    <button className="px-4 py-2 bg-indigo-500 cursor-pointer hover:bg-indigo-600 text-white rounded-xl font-bold text-sm transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 pointer-events-none">
+                    <button className="px-4 py-2 bg-indigo-500 cursor-pointer hover:bg-indigo-600 text-white rounded-xl font-bold text-sm transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                       {isUploading ? 'Uploading...' : 'Upload File'}
                     </button>
@@ -1155,7 +1154,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
                               </div>
 
                               {/* Info */}
-                              <div className="flex-1 min-w-0">
+                              <div className="flex-1 min-w-0 pr-2">
                                 <div className="text-white text-sm font-semibold truncate">{member.name || member.email}</div>
                                 <div className="text-xs text-slate-500 truncate">{member.email}</div>
                               </div>
@@ -1187,7 +1186,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
         </div>
 
         {/* Client Discussion Sidebar — locked for Starter */}
-        <div className="flex-[1.5] bg-slate-900 border border-slate-800 rounded-3xl flex flex-col shadow-xl overflow-hidden min-w-[300px]">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl flex flex-col shadow-xl overflow-hidden min-w-[300px] shrink-0 h-[80vh] xl:h-auto">
           <div className="p-6 border-b border-slate-800 bg-slate-900/50">
             <h3 className="text-lg font-bold text-white">{project.clientName || 'Client'} Discussion</h3>
             <p className="text-sm text-slate-500">Communicate directly with {project.clientName}</p>
@@ -1305,6 +1304,9 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        @media (max-width: 440px) {
+          .animate-\[fadeIn_0.3s_ease-out\] { padding: 1rem; }
+        }
       `}</style>
 
       {/* Toast Notification */}

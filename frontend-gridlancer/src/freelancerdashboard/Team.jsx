@@ -116,13 +116,13 @@ const Team = ({ user, planLimits, onUpgrade }) => {
   if (!teamData) {
     return (
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-650/10 blur-[60px] rounded-full pointer-events-none"></div>
           <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/20">
             <span className="text-2xl">👥</span>
           </div>
 
-          <h3 className="text-2xl font-black text-white mb-2">Create Your Agency Team</h3>
+          <h3 className="text-xl sm:text-2xl font-black text-white mb-2">Create Your Agency Team</h3>
           <p className="text-sm text-slate-400 mb-6 leading-relaxed">
             Expand GridLancer from a solo tool to a collaborative agency platform. Build a workspace for admins and developers.
           </p>
@@ -159,18 +159,18 @@ const Team = ({ user, planLimits, onUpgrade }) => {
   return (
     <div className="space-y-8">
       {/* Header Area */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4 mb-4">
         <div>
           <span className="px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-black uppercase rounded-lg tracking-wider">
             {teamData.name} Workspace
           </span>
-          <h2 className="text-3xl font-extrabold text-white mt-2 mb-1">Agency Team</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1 sm:mt-2 mb-1">Agency Team</h2>
           <p className="text-slate-400 font-medium">Collaborate, assign client tasks, and manage roles.</p>
         </div>
         {canManageTeam && (
           <button
             onClick={() => setIsInviteModalOpen(true)}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 text-white rounded-xl font-bold text-sm transition-all transform hover:-translate-y-0.5 shadow-lg shadow-indigo-500/25 flex items-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 text-white rounded-xl font-bold text-xs sm:text-sm transition-all transform hover:-translate-y-0.5 shadow-lg shadow-indigo-500/25 flex items-center justify-center sm:justify-start gap-2 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -181,15 +181,15 @@ const Team = ({ user, planLimits, onUpgrade }) => {
       </div>
 
       {/* Members Grid / List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-        <div className="px-6 py-5 border-b border-slate-800 bg-slate-900/40 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-white">Team Members ({members.length})</h3>
-          <span className="text-xs text-slate-500 font-medium">All accounts inherit Agency Plan limits</span>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-800 bg-slate-900/40 flex justify-between items-center">
+          <h3 className="text-base sm:text-lg font-bold text-white">Team Members ({members.length})</h3>
+          <span className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:block">All accounts inherit Agency Plan limits</span>
         </div>
 
         <div className="divide-y divide-slate-850">
           {members.map((member) => (
-            <div key={member.id} className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-850/20 transition-colors">
+            <div key={member.id} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-slate-850/20 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center text-white font-bold text-lg">
                   {member.image ? (
@@ -255,15 +255,15 @@ const Team = ({ user, planLimits, onUpgrade }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => { setIsInviteModalOpen(false); setInviteError(''); setInviteSuccess(''); }}></div>
           
-          <div className="relative bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-fadeIn flex flex-col">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+          <div className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]">
+            <div className="p-4 sm:p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
               <h2 className="text-xl font-bold text-white">Invite Team Member</h2>
               <button onClick={() => { setIsInviteModalOpen(false); setInviteError(''); setInviteSuccess(''); }} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
-            <form onSubmit={handleInviteSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleInviteSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
               {inviteError && <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-455 text-xs font-bold rounded-xl">{inviteError}</div>}
               {inviteSuccess && <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-450 text-xs font-bold rounded-xl">{inviteSuccess}</div>}
 
@@ -324,18 +324,18 @@ const Team = ({ user, planLimits, onUpgrade }) => {
                 </select>
               </div>
 
-              <div className="pt-2 flex justify-end gap-3">
+              <div className="pt-2 flex flex-col-reverse sm:flex-row justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => { setIsInviteModalOpen(false); setInviteError(''); setInviteSuccess(''); }}
-                  className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-sm text-slate-400 hover:text-white transition-colors cursor-pointer text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isInviting}
-                  className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-450 hover:to-purple-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 text-sm cursor-pointer disabled:opacity-50"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-450 hover:to-purple-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 text-sm cursor-pointer disabled:opacity-50"
                 >
                   {isInviting ? 'Creating...' : 'Invite & Provision'}
                 </button>

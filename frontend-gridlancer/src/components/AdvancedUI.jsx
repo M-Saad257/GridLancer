@@ -2,11 +2,11 @@ import React from 'react';
 
 const AdvancedUI = () => {
   return (
-    <section className="py-24 bg-slate-900 overflow-hidden relative border-y border-white/5">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-16">
+    <section className="py-16 sm:py-24 bg-slate-900 overflow-hidden relative border-y border-white/5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-10 sm:gap-16">
         <div className="lg:w-1/2">
-          <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-6">Unparalleled client experience</h2>
-          <p className="text-lg text-slate-400 mb-8 leading-relaxed">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4 sm:mb-6">Unparalleled client experience</h2>
+          <p className="text-base sm:text-lg text-slate-400 mb-6 sm:mb-8 leading-relaxed">
             Stop sending endless email updates. Give your clients a breathtaking dashboard where they can view invoices, approve tasks, and download assets instantly.
           </p>
           <ul className="space-y-4">

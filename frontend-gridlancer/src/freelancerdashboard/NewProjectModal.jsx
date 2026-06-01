@@ -169,17 +169,17 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed mt-10 inset-0 z-10 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-          <h2 className="text-2xl font-bold text-white">Create New Project</h2>
+      <div className="relative bg-slate-900 z-100000000000000 border border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 sm:p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Create New Project</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {error && <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm font-semibold">{error}</div>}
 
           <form id="new-project-form" onSubmit={handleSubmit} className="space-y-6">
@@ -216,7 +216,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated }) => {
                     {showMemberSelector ? 'Hide Selector' : 'Add Team Members'}
                   </button>
                 </div>
-                
+
                 {showMemberSelector && (
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                     <p className="text-xs text-slate-500 font-medium">Select which team members will have access to this project.</p>
@@ -247,7 +247,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated }) => {
                     </div>
                   </div>
                 )}
-                
+
                 {assignedMembers.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 p-2 bg-slate-950/40 rounded-lg border border-slate-850">
                     <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider self-center mr-1">Assigned:</span>
@@ -298,11 +298,11 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated }) => {
           </form>
         </div>
 
-        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer">
+        <div className="p-4 sm:p-6 border-t border-slate-800 bg-slate-900/50 flex flex-col-reverse sm:flex-row justify-end gap-3">
+          <button type="button" onClick={onClose} className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer">
             Cancel
           </button>
-          <button type="submit" form="new-project-form" disabled={isSubmitting || Object.keys(formErrors).length > 0} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2">
+          <button type="submit" form="new-project-form" disabled={isSubmitting || Object.keys(formErrors).length > 0} className="w-full sm:w-auto justify-center bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2">
             {isSubmitting ? 'Creating...' : 'Create Project & Client'}
           </button>
         </div>

@@ -1032,27 +1032,134 @@ app.delete("/api/invoices/:id", (req, res) => {
 
 app.delete("/api/users/:id", (req, res) => {
   const userId = req.params.id;
-  const sql = "DELETE FROM users WHERE id = ?";
-  db.query(sql, [userId], (err, result) => {
-    if (err) return res.status(500).json({ message: "Error deleting user" });
 
-    db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (NULL, 'Delete', ?)",
-      [`Freelancer (ID: ${userId}) has been deleted`], () => { });
+  // Step 1: Get all projects owned by this freelancer
+  db.query("SELECT id FROM projects WHERE user_id = ?", [userId], (err, projects) => {
+    if (err) return res.status(500).json({ message: "Error finding user projects" });
 
-    res.json({ message: "User deleted successfully" });
+    const projectIds = projects.map(p => p.id);
+
+    const cleanupProjects = (callback) => {
+      if (projectIds.length === 0) return callback();
+
+      // Delete physical files from uploads folder
+      db.query("SELECT filename FROM project_files WHERE project_id IN (?)", [projectIds], (err, files) => {
+        if (!err && files && files.length > 0) {
+          files.forEach(f => {
+            const filePath = path.join(uploadsDir, f.filename);
+            if (fs.existsSync(filePath)) {
+              try { fs.unlinkSync(filePath); } catch (e) { console.log("Error deleting file:", e); }
+            }
+          });
+        }
+
+        // Delete all project-related data
+        const tables = ['project_messages', 'invoices', 'project_tasks', 'project_files', 'project_assignments'];
+        let idx = 0;
+        const deleteNext = () => {
+          if (idx >= tables.length) {
+            // Finally delete the projects themselves
+            db.query("DELETE FROM projects WHERE user_id = ?", [userId], () => callback());
+            return;
+          }
+          db.query(`DELETE FROM ${tables[idx]} WHERE project_id IN (?)`, [projectIds], () => {
+            idx++;
+            deleteNext();
+          });
+        };
+        deleteNext();
+      });
+    };
+
+    cleanupProjects(() => {
+      // Step 2: Delete all clients of this freelancer
+      db.query("SELECT id FROM clients WHERE user_id = ?", [userId], (err, clients) => {
+        const clientIds = clients ? clients.map(c => c.id) : [];
+
+        const deleteClients = (cb) => {
+          if (clientIds.length === 0) return cb();
+          // Complaints referencing these clients will cascade via FK
+          db.query("DELETE FROM clients WHERE user_id = ?", [userId], () => cb());
+        };
+
+        deleteClients(() => {
+          // Step 3: Delete team data (team_members cascade from teams FK)
+          db.query("DELETE FROM teams WHERE owner_id = ?", [userId], () => {
+            // Step 4: Also remove this user from any team they're a member of
+            db.query("DELETE FROM team_members WHERE user_id = ?", [userId], () => {
+              // Step 5: Delete upgrade requests
+              db.query("DELETE FROM upgrade_requests WHERE user_id = ?", [userId], () => {
+                // Step 6: Delete activity log entries
+                db.query("DELETE FROM activity_log WHERE user_id = ?", [userId], () => {
+                  // Step 7: Delete the user
+                  db.query("DELETE FROM users WHERE id = ?", [userId], (err) => {
+                    if (err) return res.status(500).json({ message: "Error deleting user" });
+
+                    io.to("admins").emit("refresh_admin_dashboard");
+                    res.json({ message: "User and all associated data deleted successfully" });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
   });
 });
 
 app.delete("/api/clients/:id", (req, res) => {
   const clientId = req.params.id;
-  const sql = "DELETE FROM clients WHERE id = ?";
-  db.query(sql, [clientId], (err, result) => {
-    if (err) return res.status(500).json({ message: "Error deleting client" });
 
-    db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (NULL, 'Delete', ?)",
-      [`Client (ID: ${clientId}) has been deleted`], () => { });
+  // Step 1: Get all projects for this client
+  db.query("SELECT id FROM projects WHERE client_id = ?", [clientId], (err, projects) => {
+    if (err) return res.status(500).json({ message: "Error finding client projects" });
 
-    res.json({ message: "Client deleted successfully" });
+    const projectIds = projects.map(p => p.id);
+
+    const cleanupProjects = (callback) => {
+      if (projectIds.length === 0) return callback();
+
+      // Delete physical files
+      db.query("SELECT filename FROM project_files WHERE project_id IN (?)", [projectIds], (err, files) => {
+        if (!err && files && files.length > 0) {
+          files.forEach(f => {
+            const filePath = path.join(uploadsDir, f.filename);
+            if (fs.existsSync(filePath)) {
+              try { fs.unlinkSync(filePath); } catch (e) { console.log("Error deleting file:", e); }
+            }
+          });
+        }
+
+        // Delete all project-related data
+        const tables = ['project_messages', 'invoices', 'project_tasks', 'project_files', 'project_assignments'];
+        let idx = 0;
+        const deleteNext = () => {
+          if (idx >= tables.length) {
+            db.query("DELETE FROM projects WHERE client_id = ?", [clientId], () => callback());
+            return;
+          }
+          db.query(`DELETE FROM ${tables[idx]} WHERE project_id IN (?)`, [projectIds], () => {
+            idx++;
+            deleteNext();
+          });
+        };
+        deleteNext();
+      });
+    };
+
+    cleanupProjects(() => {
+      // Step 2: Delete complaints referencing this client (FK cascade should handle, but explicit is safer)
+      db.query("DELETE FROM complaints WHERE client_id = ?", [clientId], () => {
+        // Step 3: Delete the client
+        db.query("DELETE FROM clients WHERE id = ?", [clientId], (err) => {
+          if (err) return res.status(500).json({ message: "Error deleting client" });
+
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: "Client and all associated data deleted successfully" });
+        });
+      });
+    });
   });
 });
 
@@ -1929,53 +2036,82 @@ app.post("/api/clients/:id/request-unban", (req, res) => {
 });
 
 // UPGRADE REQUEST API
+const PLAN_HIERARCHY = { Starter: 0, Pro: 1, Agency: 2 };
+
 app.post("/api/upgrade-request", (req, res) => {
   const { user_id, requested_plan } = req.body;
 
-  if (requested_plan === 'Starter') {
-    db.query("UPDATE users SET plan = 'Starter' WHERE id = ?", [user_id], (err) => {
-      if (err) return res.status(500).json({ message: "Error updating user plan to Starter" });
+  // Fetch current plan to determine if this is a downgrade or upgrade
+  db.query("SELECT plan FROM users WHERE id = ?", [user_id], (err, userRows) => {
+    if (err || userRows.length === 0) return res.status(500).json({ message: "Error fetching user plan" });
 
-      // Cancel any pending upgrade requests for this user
-      db.query("UPDATE upgrade_requests SET status = 'Cancelled' WHERE user_id = ? AND status = 'Pending'", [user_id], () => { });
+    const currentPlan = userRows[0].plan || 'Starter';
+    const currentRank = PLAN_HIERARCHY[currentPlan] ?? 0;
+    const requestedRank = PLAN_HIERARCHY[requested_plan] ?? 0;
+    const isDowngrade = requestedRank < currentRank;
 
-      db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Plan Changed', 'Freelancer changed plan to Starter (Free)')",
-        [user_id], () => {
-          io.to("admins").emit("refresh_admin_dashboard");
-        });
+    // Handle downgrades instantly (no payment or admin approval needed)
+    if (isDowngrade) {
+      db.query("UPDATE users SET plan = ? WHERE id = ?", [requested_plan, user_id], (err) => {
+        if (err) return res.status(500).json({ message: `Error updating user plan to ${requested_plan}` });
 
-      io.to("user_" + user_id).emit("plan_updated", { plan: "Starter" });
+        // Cancel any pending upgrade requests for this user
+        db.query("UPDATE upgrade_requests SET status = 'Cancelled' WHERE user_id = ? AND status = 'Pending'", [user_id], () => { });
 
-      return res.json({
-        message: "Your plan has been updated to Starter (Free) instantly.",
-        plan: "Starter",
-        instant: true
-      });
-    });
-    return;
-  }
-
-  db.query("SELECT * FROM upgrade_requests WHERE user_id = ? AND status = 'Pending'", [user_id], (err, results) => {
-    if (err) return res.status(500).json({ message: "Database error" });
-    if (results.length > 0) {
-      return res.json({ message: "Upgrade request is already pending approval.", request: results[0] });
-    }
-
-    db.query("INSERT INTO upgrade_requests (user_id, requested_plan, status, payment_status) VALUES (?, ?, 'Pending', 'Unpaid')",
-      [user_id, requested_plan], (err, insertResult) => {
-        if (err) return res.status(500).json({ message: "Error creating upgrade request" });
-
-        db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Upgrade Requested', ?)",
-          [user_id, `Freelancer requested upgrade to ${requested_plan}`], () => {
-            // Notify admins room to refresh dashboard
+        db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Plan Changed', ?)",
+          [user_id, `Freelancer downgraded plan from ${currentPlan} to ${requested_plan}`], () => {
             io.to("admins").emit("refresh_admin_dashboard");
           });
 
-        res.json({
-          message: "Upgrade request created successfully. Please make payment to the admin's bank account.",
-          requestId: insertResult.insertId
+        io.to("user_" + user_id).emit("plan_updated", { plan: requested_plan });
+
+        // Notify freelancer's clients and project rooms about plan change
+        db.query("SELECT DISTINCT client_id, id FROM projects WHERE user_id = ?", [user_id], (err, projects) => {
+          if (!err && projects) {
+            projects.forEach(p => {
+              io.to("client_" + p.client_id).emit("project_list_updated");
+              io.to("project_" + p.id).emit("project_details_updated");
+            });
+          }
+        });
+
+        return res.json({
+          message: `Your plan has been downgraded to ${requested_plan} instantly.`,
+          plan: requested_plan,
+          instant: true
         });
       });
+      return;
+    }
+
+    // If same plan, ignore
+    if (requestedRank === currentRank) {
+      return res.json({ message: `You are already on the ${requested_plan} plan.`, plan: requested_plan, instant: true });
+    }
+
+    // Handle upgrades — requires payment + admin approval
+    db.query("SELECT * FROM upgrade_requests WHERE user_id = ? AND status = 'Pending'", [user_id], (err, results) => {
+      if (err) return res.status(500).json({ message: "Database error" });
+      if (results.length > 0) {
+        return res.json({ message: "Upgrade request is already pending approval.", request: results[0] });
+      }
+
+      db.query("INSERT INTO upgrade_requests (user_id, requested_plan, status, payment_status) VALUES (?, ?, 'Pending', 'Unpaid')",
+        [user_id, requested_plan], (err, insertResult) => {
+          if (err) return res.status(500).json({ message: "Error creating upgrade request" });
+
+          db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Upgrade Requested', ?)",
+            [user_id, `Freelancer requested upgrade to ${requested_plan}`], () => {
+              // Notify admins room to refresh dashboard
+              io.to("admins").emit("refresh_admin_dashboard");
+            });
+
+          res.json({
+            message: "Upgrade request created successfully. Please make payment to the admin's bank account.",
+            requestId: insertResult.insertId
+          });
+        });
+    });
   });
 });
 

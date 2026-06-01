@@ -3,41 +3,41 @@ import { Link } from 'react-router-dom';
 
 const Hero = () => {
   return (
-    <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-40 overflow-hidden bg-slate-950 min-h-screen flex flex-col items-start sm:text-left">
+    <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-20 lg:pt-40 lg:pb-40 overflow-hidden bg-slate-950 min-h-screen flex flex-col items-start sm:text-left">
       {/* Background Gradients */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-600/30 blur-[150px] rounded-full pointer-events-none"></div>
       <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-purple-600/20 blur-[150px] rounded-full pointer-events-none"></div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 text-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 
-        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight max-w-5xl mx-auto drop-shadow-lg">
+        <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight max-w-5xl mx-auto drop-shadow-lg">
           Give your clients their own <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 animate-gradient-x">dashboard</span>
         </h1>
-        <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-2xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
+        <p className="mt-3 sm:mt-6 text-xs sm:text-lg md:text-2xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light px-2 sm:px-0">
           Manage clients, track projects, and share real-time progress — all in one powerful, beautifully designed platform built for modern agencies.
         </p>
-        <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6">
-          <Link to="/signup" className="w-full sm:w-auto group relative px-6 py-3 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-base sm:text-lg hover:shadow-2xl hover:shadow-indigo-500/40 transition-all transform hover:-translate-y-1 overflow-hidden">
+        <div className="mt-6 sm:mt-12 flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6 px-2 sm:px-0">
+          <Link to="/signup" className="w-full sm:w-auto group relative px-5 py-2.5 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-sm sm:text-lg hover:shadow-2xl hover:shadow-indigo-500/40 transition-all transform hover:-translate-y-1 overflow-hidden">
             <span className="relative z-10">Get Started for Free</span>
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
           </Link>
-          <a href="#features" className="w-full sm:w-auto group px-6 py-3 sm:px-8 sm:py-4 rounded-full bg-slate-900/50 border border-slate-700 hover:border-slate-500 text-white font-bold text-base sm:text-lg backdrop-blur-md transition-all flex items-center justify-center gap-2">
+          <a href="#features" className="w-full sm:w-auto group px-5 py-2.5 sm:px-8 sm:py-4 rounded-full bg-slate-900/50 border border-slate-700 hover:border-slate-500 text-white font-bold text-sm sm:text-lg backdrop-blur-md transition-all flex items-center justify-center gap-2">
             View Features
             <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
           </a>
         </div>
 
         {/* Massive Detailed Dashboard Mockup */}
-        <div className="mt-16 sm:mt-28 relative max-w-6xl mx-auto perspective-1000 z-20 group">
+        <div className="mt-10 sm:mt-28 relative max-w-6xl mx-auto perspective-1000 z-20 group">
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
 
           <div className="relative rounded-2xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col transform transition-transform duration-700 hover:scale-[1.02]">
             {/* Mockup Window Header */}
-            <div className="h-12 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800 flex items-center px-6 gap-3">
-              <div className="w-3.5 h-3.5 rounded-full bg-rose-500/90 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
-              <div className="w-3.5 h-3.5 rounded-full bg-amber-500/90 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
-              <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/90 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-              <div className="ml-auto w-64 h-6 bg-slate-800 rounded-md border border-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-mono tracking-widest">gridlancer.com/dashboard</div>
+            <div className="h-10 sm:h-12 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800 flex items-center px-3 sm:px-6 gap-2 sm:gap-3">
+              <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-rose-500/90 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
+              <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-amber-500/90 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+              <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-500/90 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+              <div className="ml-auto max-w-[160px] sm:max-w-[256px] w-full h-5 sm:h-6 bg-slate-800 rounded-md border border-slate-700 flex items-center justify-center text-[8px] sm:text-[10px] text-slate-500 font-mono tracking-widest truncate px-2">gridlancer.com/dashboard</div>
             </div>
 
             {/* Mockup Body Layout */}
@@ -67,11 +67,11 @@ const Hero = () => {
               </div>
 
               {/* Main Content Area */}
-              <div className="flex-1 p-4 sm:p-8 flex flex-col gap-6 sm:gap-8 overflow-hidden">
+              <div className="flex-1 p-3 sm:p-8 flex flex-col gap-4 sm:gap-8 overflow-hidden">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Welcome back, John 👋</h2>
-                    <p className="text-slate-400 text-xs sm:text-sm font-medium">Here's what's happening with your projects today.</p>
+                    <h2 className="text-base sm:text-2xl font-bold text-white mb-1">Welcome back, John 👋</h2>
+                    <p className="text-slate-400 text-[10px] sm:text-sm font-medium">Here's what's happening with your projects today.</p>
                   </div>
                   <div className="hidden md:flex gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 cursor-pointer hover:bg-slate-700 hover:text-white transition-colors">🔔</div>
@@ -80,32 +80,32 @@ const Hero = () => {
                 </div>
 
                 {/* Stats Row */}
-                <div className="grid grid-cols-1 min-[500px]:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 sm:gap-6">
                   {[
                     { label: 'Total Revenue', value: '$24,500', change: '+12%', color: 'text-emerald-400' },
                     { label: 'Active Projects', value: '12', change: '+2', color: 'text-indigo-400' },
                     { label: 'Pending Invoices', value: '3', change: '-1', color: 'text-rose-400' }
                   ].map((stat, i) => (
-                    <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-pointer">
+                    <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-3 sm:p-5 shadow-lg relative overflow-hidden group hover:border-indigo-500/50 transition-colors cursor-pointer">
                       <div className="absolute -right-6 -top-6 w-24 h-24 bg-slate-800 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
-                      <div className="text-sm font-semibold text-slate-400 mb-1 relative z-10">{stat.label}</div>
-                      <div className="text-3xl font-extrabold text-white relative z-10 flex items-end gap-3">
+                      <div className="text-[10px] sm:text-sm font-semibold text-slate-400 mb-1 relative z-10">{stat.label}</div>
+                      <div className="text-lg sm:text-3xl font-extrabold text-white relative z-10 flex items-end gap-1 sm:gap-3">
                         {stat.value}
-                        <span className={`text-sm font-semibold ${stat.color} mb-1`}>{stat.change}</span>
+                        <span className={`text-[10px] sm:text-sm font-semibold ${stat.color} mb-0.5 sm:mb-1`}>{stat.change}</span>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Chart & Activity */}
-                <div className="flex flex-col md:flex-row gap-4 sm:gap-6 h-[400px] sm:h-full min-h-0">
-                  <div className="flex-1 md:flex-[2] bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 shadow-lg flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                      <div className="text-white font-bold text-lg">Revenue Growth</div>
-                      <div className="px-3 py-1 bg-slate-800 rounded-md text-xs font-semibold text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors">This Month ▼</div>
+                <div className="flex flex-col md:flex-row gap-3 sm:gap-6 h-[280px] sm:h-full min-h-0">
+                  <div className="flex-1 md:flex-[2] bg-slate-900 border border-slate-800 rounded-xl p-3 sm:p-6 shadow-lg flex flex-col">
+                    <div className="flex justify-between items-center mb-3 sm:mb-6">
+                      <div className="text-white font-bold text-xs sm:text-lg">Revenue Growth</div>
+                      <div className="px-2 py-0.5 sm:px-3 sm:py-1 bg-slate-800 rounded-md text-[10px] sm:text-xs font-semibold text-slate-300 cursor-pointer hover:bg-slate-700 transition-colors">This Month ▼</div>
                     </div>
                     {/* Fake Chart Lines */}
-                    <div className="flex-1 relative flex items-end gap-3 pb-6 border-b border-slate-800">
+                    <div className="flex-1 relative flex items-end gap-1 sm:gap-3 pb-4 sm:pb-6 border-b border-slate-800">
                       {[40, 60, 45, 80, 55, 90, 75, 100].map((h, i) => (
                         <div key={i} className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/30 transition-colors rounded-t-lg relative group cursor-pointer" style={{ height: `${h}%` }}>
                           <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white font-bold text-xs py-1.5 px-2.5 rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 pointer-events-none">${h}k</div>
@@ -113,7 +113,7 @@ const Hero = () => {
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between text-xs font-bold text-slate-500 mt-4 uppercase tracking-widest px-2">
+                    <div className="flex justify-between text-[8px] sm:text-xs font-bold text-slate-500 mt-2 sm:mt-4 uppercase tracking-widest px-1 sm:px-2">
                       <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
                     </div>
                   </div>
