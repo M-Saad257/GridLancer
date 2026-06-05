@@ -94,6 +94,85 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   const [tasks, setTasks] = useState([]);
   const [files, setFiles] = useState([]);
 
+  // New features states
+  const [milestones, setMilestones] = useState([]);
+  const [revisionNote, setRevisionNote] = useState('');
+  const [activeRevisionMsId, setActiveRevisionMsId] = useState(null);
+
+  const [contracts, setContracts] = useState([]);
+  const [digitalSignature, setDigitalSignature] = useState('');
+
+  const [timeLogs, setTimeLogs] = useState([]);
+  const [activities, setActivities] = useState([]);
+
+  // Fetch milestones
+  useEffect(() => {
+    const fetchMilestones = () => {
+      axios.get(`http://localhost:5000/api/milestones/project/${project.id}?t=${Date.now()}`)
+        .then(res => setMilestones(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Milestones') {
+      fetchMilestones();
+      socket.on("project_details_updated", fetchMilestones);
+      return () => {
+        socket.off("project_details_updated", fetchMilestones);
+      };
+    }
+  }, [activeTab, project.id]);
+
+  // Fetch contracts
+  useEffect(() => {
+    const fetchContracts = () => {
+      axios.get(`http://localhost:5000/api/contracts/project/${project.id}?t=${Date.now()}`)
+        .then(res => setContracts(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Contracts') {
+      fetchContracts();
+      socket.on("project_details_updated", fetchContracts);
+      return () => {
+        socket.off("project_details_updated", fetchContracts);
+      };
+    }
+  }, [activeTab, project.id]);
+
+  // Fetch time logs
+  useEffect(() => {
+    const fetchTimeLogs = () => {
+      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}?t=${Date.now()}`)
+        .then(res => setTimeLogs(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Time Tracking') {
+      fetchTimeLogs();
+      socket.on("project_details_updated", fetchTimeLogs);
+      return () => {
+        socket.off("project_details_updated", fetchTimeLogs);
+      };
+    }
+  }, [activeTab, project.id]);
+
+  // Fetch activities
+  useEffect(() => {
+    const fetchActivities = () => {
+      axios.get(`http://localhost:5000/api/projects/${project.id}/activities?t=${Date.now()}`)
+        .then(res => setActivities(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Activity Feed') {
+      fetchActivities();
+      socket.on("project_details_updated", fetchActivities);
+      return () => {
+        socket.off("project_details_updated", fetchActivities);
+      };
+    }
+  }, [activeTab, project.id]);
+
   useEffect(() => {
     const fetchInvoices = () => {
       axios.get(`http://localhost:5000/api/projects/${project.id}/invoices?t=${Date.now()}`)
@@ -646,6 +725,84 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
     }
   };
 
+  const handleApproveMilestone = async (milestoneId) => {
+    try {
+      await axios.put(`http://localhost:5000/api/milestones/${milestoneId}/status`, {
+        status: 'Approved',
+        user_id: client.id
+      });
+      setToastMessage({ title: 'Approved', desc: 'Milestone approved and marked complete!', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+        .then(res => setMilestones(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRequestMilestoneRevision = async (e) => {
+    e.preventDefault();
+    if (!revisionNote.trim() || !activeRevisionMsId) return;
+    try {
+      await axios.put(`http://localhost:5000/api/milestones/${activeRevisionMsId}/status`, {
+        status: 'Revision Requested',
+        note: revisionNote,
+        user_id: client.id
+      });
+      setToastMessage({ title: 'Revision Requested', desc: 'Revision details sent to freelancer.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      setRevisionNote('');
+      setActiveRevisionMsId(null);
+
+      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+        .then(res => setMilestones(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSignContract = async (contractId) => {
+    if (!digitalSignature.trim()) return;
+    try {
+      await axios.put(`http://localhost:5000/api/contracts/${contractId}/status`, {
+        status: 'Accepted',
+        digital_signature: digitalSignature,
+        client_id: client.id
+      });
+      setDigitalSignature('');
+      setToastMessage({ title: 'Contract Signed', desc: 'You have signed this contract successfully.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/contracts/project/${project.id}`)
+        .then(res => setContracts(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRejectContract = async (contractId) => {
+    if (!window.confirm("Are you sure you want to reject this contract?")) return;
+    try {
+      await axios.put(`http://localhost:5000/api/contracts/${contractId}/status`, {
+        status: 'Rejected',
+        client_id: client.id
+      });
+      setToastMessage({ title: 'Contract Rejected', desc: 'You have rejected this contract proposal.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/contracts/project/${project.id}`)
+        .then(res => setContracts(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Helper for relative time formatting
   const timeAgo = (dateString) => {
     const date = new Date(dateString);
@@ -705,7 +862,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
           {/* Tabs */}
           <div className="flex gap-2 sm:gap-6 border-b border-slate-800 mb-6 overflow-x-auto pb-2 custom-scrollbar">
-            {['Overview', 'Activity', 'Files & Assets', 'Invoices'].map(tab => (
+            {['Overview', 'Activity', 'Files & Assets', 'Milestones', 'Contracts', 'Time Tracking', 'Activity Feed', 'Invoices'].map(tab => (
               <div
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -856,6 +1013,232 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'Milestones' && (
+              <div className="space-y-6 animate-fadeIn">
+                <h3 className="text-xl font-bold text-white mb-6">Project Milestones</h3>
+
+                {activeRevisionMsId && (
+                  <form onSubmit={handleRequestMilestoneRevision} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 animate-[fadeIn_0.2s_ease-out]">
+                    <h4 className="text-sm font-bold text-rose-450 uppercase">Request Revision Feedback</h4>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">What needs to be changed?</label>
+                      <textarea required rows="3" placeholder="Provide specific feedback on deliverables..." value={revisionNote} onChange={e => setRevisionNote(e.target.value)} className="w-full px-4 py-3 bg-slate-900 border border-slate-850 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => { setActiveRevisionMsId(null); setRevisionNote(''); }} className="px-4 py-2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 text-xs font-bold rounded-xl transition-all">Cancel</button>
+                      <button type="submit" className="px-5 py-2 bg-rose-500 hover:bg-rose-650 text-white rounded-xl text-xs font-bold transition-all shadow-md">Request Revision</button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="space-y-3">
+                  {milestones.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500 italic border border-dashed border-slate-800 rounded-2xl">No milestones created for this project yet.</div>
+                  ) : (
+                    milestones.map(ms => (
+                      <div key={ms.id} className="bg-slate-950 border border-slate-850 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-slate-800 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              ms.status === 'Approved' ? 'bg-emerald-400' :
+                              ms.status === 'Pending Review' ? 'bg-yellow-400' :
+                              ms.status === 'Revision Requested' ? 'bg-rose-400' : 'bg-slate-500'
+                            }`}></span>
+                            <span className="font-bold text-white text-sm">{ms.title}</span>
+                          </div>
+                          {ms.description && <p className="text-xs text-slate-400 mt-1">{ms.description}</p>}
+                          <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 mt-2 font-semibold">
+                            {ms.deadline && <span>Target: {new Date(ms.deadline).toLocaleDateString()}</span>}
+                            {ms.amount && <span className="text-indigo-400">Amount: ${ms.amount}</span>}
+                            <span className="uppercase tracking-wider px-2 py-0.5 bg-slate-900 border border-slate-850 rounded text-slate-400">{ms.status}</span>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 flex gap-2 w-full md:w-auto justify-end">
+                          {ms.status === 'Pending Review' && (
+                            <>
+                              <button
+                                onClick={() => setActiveRevisionMsId(ms.id)}
+                                className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-450 hover:text-white font-extrabold text-[10px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                              >
+                                Request Revision
+                              </button>
+                              <button
+                                onClick={() => handleApproveMilestone(ms.id)}
+                                className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition-all cursor-pointer shadow shadow-emerald-500/20"
+                              >
+                                Approve Deliverable
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Contracts' && (
+              <div className="space-y-6 animate-fadeIn">
+                <h3 className="text-xl font-bold text-white mb-6">Digital Contracts</h3>
+
+                <div className="space-y-3">
+                  {contracts.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500 italic border border-dashed border-slate-800 rounded-2xl">No contract drafted yet. Agreements sent by your freelancer will show up here.</div>
+                  ) : (
+                    contracts.map(cnt => (
+                      <div key={cnt.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 space-y-4 hover:border-slate-800 transition-colors">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h4 className="font-bold text-white text-sm">{cnt.title}</h4>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Sent on {new Date(cnt.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                            cnt.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            cnt.status === 'Rejected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                            'bg-slate-800 text-slate-400'
+                          }`}>{cnt.status}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Scope</span>
+                            <p className="text-slate-350 whitespace-pre-wrap leading-relaxed">{cnt.scope}</p>
+                          </div>
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Terms</span>
+                            <p className="text-slate-350 whitespace-pre-wrap leading-relaxed">{cnt.terms}</p>
+                          </div>
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Payment</span>
+                            <p className="text-slate-350 whitespace-pre-wrap leading-relaxed">{cnt.payment_terms}</p>
+                          </div>
+                        </div>
+
+                        {cnt.status === 'Pending' && (
+                          <div className="pt-4 border-t border-slate-900 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                            <div className="flex-1 w-full">
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sign Digitally (Type full name)</label>
+                              <input required type="text" placeholder="Type your name to sign..." value={digitalSignature} onChange={e => setDigitalSignature(e.target.value)} className="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                            </div>
+                            <div className="flex gap-2 w-full sm:w-auto shrink-0 pt-4 sm:pt-0">
+                              <button onClick={() => handleRejectContract(cnt.id)} className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-rose-400 text-xs font-bold rounded-xl transition-all cursor-pointer">Reject</button>
+                              <button onClick={() => handleSignContract(cnt.id)} className="flex-1 sm:flex-none px-5 py-2.5 bg-indigo-500 hover:bg-indigo-650 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-indigo-500/25 cursor-pointer">Sign & Accept</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {cnt.status === 'Accepted' && (
+                          <div className="pt-3 border-t border-slate-900 flex justify-between items-center text-[10px] text-slate-500 font-semibold">
+                            <span>Signature: <strong className="text-indigo-400 font-mono text-xs">{cnt.digital_signature}</strong></span>
+                            <span>Signed At: {new Date(cnt.signed_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Time Tracking' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Time Tracking Logs</h3>
+                    <p className="text-xs text-slate-450 mt-0.5">Review freelancer hours tracked on this project.</p>
+                  </div>
+                  
+                  {timeLogs.length > 0 && (
+                    <div className="text-sm font-bold text-slate-400 bg-slate-850 border border-slate-800 px-3 py-1 rounded-lg">
+                      Total Tracked: <span className="text-indigo-400">{(timeLogs.reduce((acc, log) => acc + log.duration, 0) / 3600).toFixed(2)} hrs</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-inner">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                        <th className="p-4">Worker</th>
+                        <th className="p-4">Description</th>
+                        <th className="p-4">Duration</th>
+                        <th className="p-4">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900">
+                      {timeLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="p-10 text-center text-slate-500 italic">No tracked hours reported yet.</td>
+                        </tr>
+                      ) : (
+                        timeLogs.map(log => {
+                          const durationStr = log.end_time 
+                            ? `${Math.floor(log.duration / 3600)}h ${Math.floor((log.duration % 3600) / 60)}m`
+                            : 'Tracking...';
+                          return (
+                            <tr key={log.id} className="hover:bg-slate-900/40 text-slate-200 font-medium">
+                              <td className="p-4 font-bold">{log.userName || 'Freelancer'}</td>
+                              <td className="p-4 text-slate-350">{log.description || 'Working session'}</td>
+                              <td className="p-4 font-bold text-indigo-400">{durationStr}</td>
+                              <td className="p-4 text-slate-500">{new Date(log.start_time).toLocaleDateString()}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Activity Feed' && (
+              <div className="space-y-6 animate-fadeIn">
+                <h3 className="text-xl font-bold text-white mb-6">Activity Timeline</h3>
+                
+                <div className="relative border-l border-slate-800 pl-6 ml-3 space-y-8 py-4">
+                  {activities.length === 0 ? (
+                    <div className="text-slate-500 italic text-xs pl-2">No activity timeline records.</div>
+                  ) : (
+                    activities.map(act => {
+                      const icons = {
+                        created: '📁',
+                        task_completed: '✅',
+                        file_uploaded: '📎',
+                        invoice_paid: '💵',
+                        invoice_generated: '📄',
+                        meeting_scheduled: '📹',
+                        milestone_created: '🎯',
+                        milestone_submitted: '📤',
+                        milestone_approved: '✨',
+                        milestone_revision: '✏️',
+                        contract_sent: '✍️',
+                        contract_signed: '🤝'
+                      };
+                      return (
+                        <div key={act.id} className="relative group">
+                          {/* Timeline Dot */}
+                          <div className="absolute -left-10 top-0.5 w-8 h-8 rounded-full bg-slate-900 border border-slate-850 flex items-center justify-center text-xs shadow-md group-hover:border-indigo-500 transition-colors">
+                            {icons[act.activity_type] || '🔔'}
+                          </div>
+                          
+                          <div>
+                            <p className="text-xs sm:text-sm font-bold text-white">{act.message}</p>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                              <span>By {act.created_by_type}</span>
+                              <span>•</span>
+                              <span>{new Date(act.created_at).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             )}
 

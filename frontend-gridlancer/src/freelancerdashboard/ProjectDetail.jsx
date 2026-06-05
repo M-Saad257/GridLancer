@@ -22,6 +22,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const [tasks, setTasks] = useState([]);
 
   // Files state
+  
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -42,6 +43,115 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     description: project.description || '',
     deadline: project.deadline ? project.deadline.split('T')[0] : ''
   });
+
+  // New features states
+  const [milestones, setMilestones] = useState([]);
+  const [isMilestoneFormOpen, setIsMilestoneFormOpen] = useState(false);
+  const [newMilestone, setNewMilestone] = useState({ title: '', description: '', amount: '', deadline: '' });
+
+  const [contracts, setContracts] = useState([]);
+  const [isContractFormOpen, setIsContractFormOpen] = useState(false);
+  const [newContract, setNewContract] = useState({ title: '', scope: '', terms: '', payment_terms: '' });
+
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [activeTimerId, setActiveTimerId] = useState(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timeLogs, setTimeLogs] = useState([]);
+  const [isManualTimeFormOpen, setIsManualTimeFormOpen] = useState(false);
+  const [manualTime, setManualTime] = useState({ description: '', hours: '', minutes: '' });
+
+  const [activities, setActivities] = useState([]);
+
+  // Fetch milestones
+  useEffect(() => {
+    const fetchMilestones = () => {
+      axios.get(`http://localhost:5000/api/milestones/project/${project.id}?t=${Date.now()}`)
+        .then(res => setMilestones(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Milestones') {
+      fetchMilestones();
+      socket.on("project_details_updated", fetchMilestones);
+      return () => {
+        socket.off("project_details_updated", fetchMilestones);
+      };
+    }
+  }, [activeTab, project.id]);
+
+  // Fetch contracts
+  useEffect(() => {
+    const fetchContracts = () => {
+      axios.get(`http://localhost:5000/api/contracts/project/${project.id}?t=${Date.now()}`)
+        .then(res => setContracts(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Contracts') {
+      fetchContracts();
+      socket.on("project_details_updated", fetchContracts);
+      return () => {
+        socket.off("project_details_updated", fetchContracts);
+      };
+    }
+  }, [activeTab, project.id]);
+
+  // Fetch time logs & search active timers
+  useEffect(() => {
+    const fetchTimeLogs = () => {
+      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}?t=${Date.now()}`)
+        .then(res => {
+          setTimeLogs(res.data);
+          // Check if there is an active running timer for this user in this project
+          const running = res.data.find(log => log.end_time === null && log.user_id === user.id);
+          if (running) {
+            setIsTimerRunning(true);
+            setActiveTimerId(running.id);
+            const elapsed = Math.floor((Date.now() - new Date(running.start_time).getTime()) / 1000);
+            setTimerSeconds(elapsed > 0 ? elapsed : 0);
+          }
+        })
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Time Tracking') {
+      fetchTimeLogs();
+      socket.on("project_details_updated", fetchTimeLogs);
+      return () => {
+        socket.off("project_details_updated", fetchTimeLogs);
+      };
+    }
+  }, [activeTab, project.id, user.id]);
+
+  // Timer interval
+  useEffect(() => {
+    let interval = null;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
+  // Fetch activities
+  useEffect(() => {
+    const fetchActivities = () => {
+      axios.get(`http://localhost:5000/api/projects/${project.id}/activities?t=${Date.now()}`)
+        .then(res => setActivities(res.data))
+        .catch(console.error);
+    };
+
+    if (activeTab === 'Activity Feed') {
+      fetchActivities();
+      socket.on("project_details_updated", fetchActivities);
+      return () => {
+        socket.off("project_details_updated", fetchActivities);
+      };
+    }
+  }, [activeTab, project.id]);
 
   // Fetch invoices when tab is opened
   useEffect(() => {
@@ -799,6 +909,168 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     }
   };
 
+  const handleCreateMilestone = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/milestones", {
+        project_id: project.id,
+        title: newMilestone.title,
+        description: newMilestone.description,
+        amount: newMilestone.amount ? parseFloat(newMilestone.amount) : null,
+        deadline: newMilestone.deadline || null,
+        user_id: user.id
+      });
+      setNewMilestone({ title: '', description: '', amount: '', deadline: '' });
+      setIsMilestoneFormOpen(false);
+      setToastMessage({ title: 'Milestone Created', desc: 'Milestone created successfully!', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      
+      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+        .then(res => setMilestones(res.data));
+    } catch (err) {
+      console.error(err);
+      setToastMessage({ title: 'Error', desc: 'Failed to create milestone.', type: 'error' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleSubmitMilestoneForReview = async (milestoneId) => {
+    try {
+      await axios.put(`http://localhost:5000/api/milestones/${milestoneId}/status`, {
+        status: 'Pending Review',
+        user_id: user.id
+      });
+      setToastMessage({ title: 'Submitted', desc: 'Milestone submitted for review!', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      
+      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+        .then(res => setMilestones(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateContract = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/contracts", {
+        project_id: project.id,
+        title: newContract.title,
+        scope: newContract.scope,
+        terms: newContract.terms,
+        payment_terms: newContract.payment_terms,
+        user_id: user.id
+      });
+      setNewContract({ title: '', scope: '', terms: '', payment_terms: '' });
+      setIsContractFormOpen(false);
+      setToastMessage({ title: 'Contract Sent', desc: 'Contract drafted and sent to client!', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      
+      axios.get(`http://localhost:5000/api/contracts/project/${project.id}`)
+        .then(res => setContracts(res.data));
+    } catch (err) {
+      console.error(err);
+      setToastMessage({ title: 'Error', desc: 'Failed to create contract.', type: 'error' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleStartTimer = async () => {
+    try {
+      const nowStr = new Date().toISOString();
+      const res = await axios.post("http://localhost:5000/api/time-entries", {
+        project_id: project.id,
+        user_id: user.id,
+        description: 'Timer started',
+        start_time: nowStr,
+        is_manual: false
+      });
+      setIsTimerRunning(true);
+      setActiveTimerId(res.data.logId);
+      setTimerSeconds(0);
+      setToastMessage({ title: 'Timer Started', desc: 'Working hours are now tracking.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+        .then(res => setTimeLogs(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleStopTimer = async (description) => {
+    if (!activeTimerId) return;
+    try {
+      const nowStr = new Date().toISOString();
+      await axios.put(`http://localhost:5000/api/time-entries/${activeTimerId}/stop`, {
+        end_time: nowStr,
+        duration: timerSeconds,
+        description: description || 'No description provided'
+      });
+      setIsTimerRunning(false);
+      setActiveTimerId(null);
+      setTimerSeconds(0);
+      setToastMessage({ title: 'Timer Stopped', desc: 'Time has been logged.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+        .then(res => setTimeLogs(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddManualTime = async (e) => {
+    e.preventDefault();
+    const totalSeconds = (parseInt(manualTime.hours || 0) * 3600) + (parseInt(manualTime.minutes || 0) * 60);
+    if (totalSeconds <= 0) return;
+    try {
+      const now = new Date();
+      const start = new Date(now.getTime() - totalSeconds * 1000).toISOString();
+      await axios.post("http://localhost:5000/api/time-entries", {
+        project_id: project.id,
+        user_id: user.id,
+        description: manualTime.description || 'Manual entry',
+        start_time: start,
+        end_time: now.toISOString(),
+        duration: totalSeconds,
+        is_manual: true
+      });
+      setManualTime({ description: '', hours: '', minutes: '' });
+      setIsManualTimeFormOpen(false);
+      setToastMessage({ title: 'Time Logged', desc: 'Manual time log added successfully.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+        .then(res => setTimeLogs(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteTimeLog = async (logId) => {
+    if (!window.confirm("Are you sure you want to delete this time entry?")) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/time-entries/${logId}`);
+      setToastMessage({ title: 'Deleted', desc: 'Time entry deleted.', type: 'success' });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+
+      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+        .then(res => setTimeLogs(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Helper for relative time formatting
   const timeAgo = (dateString) => {
     const date = new Date(dateString);
@@ -846,7 +1118,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
           {/* Tabs */}
           <div className="flex gap-2 sm:gap-6 border-b border-slate-800 mb-6 overflow-x-auto pb-2 custom-scrollbar">
-            {['Overview', 'Tasks', 'Files & Assets', ...(user?.role !== 'member' ? ['Invoices', 'Settings'] : [])].map(tab => (
+            {['Overview', 'Tasks', 'Files & Assets', 'Milestones', 'Contracts', 'Time Tracking', 'Activity Feed', ...(user?.role !== 'member' ? ['Invoices', 'Settings'] : [])].map(tab => (
               <div
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -986,6 +1258,330 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'Milestones' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-white">Project Milestones</h3>
+                  {user?.role !== 'member' && (
+                    <button
+                      onClick={() => setIsMilestoneFormOpen(!isMilestoneFormOpen)}
+                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      {isMilestoneFormOpen ? 'Cancel' : '➕ Add Milestone'}
+                    </button>
+                  )}
+                </div>
+
+                {isMilestoneFormOpen && user?.role !== 'member' && (
+                  <form onSubmit={handleCreateMilestone} className="bg-slate-950 p-5 rounded-2xl border border-slate-805 space-y-4 animate-[fadeIn_0.2s_ease-out]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Milestone Title</label>
+                        <input required type="text" placeholder="e.g. Design Handover" value={newMilestone.title} onChange={e => setNewMilestone({...newMilestone, title: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Target Deadline</label>
+                        <input type="date" value={newMilestone.deadline} onChange={e => setNewMilestone({...newMilestone, deadline: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Description (Optional)</label>
+                        <input type="text" placeholder="Details about deliverables..." value={newMilestone.description} onChange={e => setNewMilestone({...newMilestone, description: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Payment Amount ($) (Optional)</label>
+                        <input type="number" step="0.01" placeholder="e.g. 500 (auto-generates invoice on approval)" value={newMilestone.amount} onChange={e => setNewMilestone({...newMilestone, amount: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <button type="submit" className="px-6 py-2.5 bg-indigo-500 hover:bg-indigo-650 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer">Create Milestone</button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="space-y-3">
+                  {milestones.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500 italic border border-dashed border-slate-800 rounded-2xl">No milestones created yet. Add milestones to track project phases.</div>
+                  ) : (
+                    milestones.map(ms => (
+                      <div key={ms.id} className="bg-slate-950 border border-slate-850 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-slate-800 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              ms.status === 'Approved' ? 'bg-emerald-400' :
+                              ms.status === 'Pending Review' ? 'bg-yellow-400' :
+                              ms.status === 'Revision Requested' ? 'bg-rose-400' : 'bg-slate-500'
+                            }`}></span>
+                            <span className="font-bold text-white text-sm">{ms.title}</span>
+                          </div>
+                          {ms.description && <p className="text-xs text-slate-400 mt-1">{ms.description}</p>}
+                          <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 mt-2 font-semibold">
+                            {ms.deadline && <span>Target: {new Date(ms.deadline).toLocaleDateString()}</span>}
+                            {ms.amount && <span className="text-indigo-400">Payment: ${ms.amount}</span>}
+                            <span className="uppercase tracking-wider px-2 py-0.5 bg-slate-900 border border-slate-850 rounded text-slate-400">{ms.status}</span>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 flex gap-2 w-full md:w-auto justify-end">
+                          {ms.status === 'Pending' && (
+                            <button
+                              onClick={() => handleSubmitMilestoneForReview(ms.id)}
+                              className="px-3.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/25 border border-indigo-500/20 text-indigo-400 hover:text-indigo-300 font-extrabold text-[10px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                            >
+                              Submit for Review
+                            </button>
+                          )}
+                          {ms.status === 'Revision Requested' && (
+                            <button
+                              onClick={() => handleSubmitMilestoneForReview(ms.id)}
+                              className="px-3.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/25 border border-yellow-500/20 text-yellow-400 font-extrabold text-[10px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                            >
+                              Resubmit for Review
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Contracts' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-white">Digital Contracts</h3>
+                  {user?.role !== 'member' && (
+                    <button
+                      onClick={() => setIsContractFormOpen(!isContractFormOpen)}
+                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-650 border border-indigo-550/20 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      {isContractFormOpen ? 'Cancel' : '➕ Draft Contract'}
+                    </button>
+                  )}
+                </div>
+
+                {isContractFormOpen && user?.role !== 'member' && (
+                  <form onSubmit={handleCreateContract} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 animate-[fadeIn_0.2s_ease-out]">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Contract Title</label>
+                      <input required type="text" placeholder="e.g. Master Services Agreement" value={newContract.title} onChange={e => setNewContract({...newContract, title: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Project Scope</label>
+                      <textarea required rows="3" placeholder="Describe scope of deliverables..." value={newContract.scope} onChange={e => setNewContract({...newContract, scope: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Terms & Conditions</label>
+                      <textarea required rows="3" placeholder="IP ownership, revisions policy, etc..." value={newContract.terms} onChange={e => setNewContract({...newContract, terms: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Payment Terms</label>
+                      <textarea required rows="2" placeholder="e.g. 50% upfront, 50% on completion..." value={newContract.payment_terms} onChange={e => setNewContract({...newContract, payment_terms: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <button type="submit" className="px-6 py-2.5 bg-indigo-500 hover:bg-indigo-650 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer">Send to Client</button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="space-y-3">
+                  {contracts.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500 italic border border-dashed border-slate-800 rounded-2xl">No contract drafted yet. Draft a digital agreement to lock scopes and secure trust.</div>
+                  ) : (
+                    contracts.map(cnt => (
+                      <div key={cnt.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 space-y-4 hover:border-slate-800 transition-colors">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h4 className="font-bold text-white text-sm">{cnt.title}</h4>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Created on {new Date(cnt.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                            cnt.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            cnt.status === 'Rejected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                            'bg-slate-800 text-slate-400'
+                          }`}>{cnt.status}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Scope</span>
+                            <p className="text-slate-350 whitespace-pre-wrap">{cnt.scope}</p>
+                          </div>
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Terms</span>
+                            <p className="text-slate-350 whitespace-pre-wrap">{cnt.terms}</p>
+                          </div>
+                          <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Payment</span>
+                            <p className="text-slate-350 whitespace-pre-wrap">{cnt.payment_terms}</p>
+                          </div>
+                        </div>
+
+                        {cnt.status === 'Accepted' && (
+                          <div className="pt-3 border-t border-slate-900 flex justify-between items-center text-[10px] text-slate-500 font-semibold">
+                            <span>Signature: <strong className="text-indigo-400 font-mono text-xs">{cnt.digital_signature}</strong></span>
+                            <span>Signed At: {new Date(cnt.signed_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Time Tracking' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Time Tracking Logs</h3>
+                    <p className="text-xs text-slate-450 mt-0.5">Track work hours dynamically or log manual slots.</p>
+                  </div>
+                  
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => setIsManualTimeFormOpen(!isManualTimeFormOpen)}
+                      className="flex-1 sm:flex-none px-4 py-2 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      {isManualTimeFormOpen ? 'Cancel' : '📝 Log Manual'}
+                    </button>
+                    {isTimerRunning ? (
+                      <button
+                        onClick={() => {
+                          const desc = prompt("What did you work on during this session?");
+                          handleStopTimer(desc);
+                        }}
+                        className="flex-1 sm:flex-none px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all animate-pulse shadow-lg shadow-rose-500/20 cursor-pointer"
+                      >
+                        ⏱️ Stop ({Math.floor(timerSeconds/3600)}h {Math.floor((timerSeconds%3600)/60)}m {timerSeconds%60}s)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStartTimer}
+                        className="flex-1 sm:flex-none px-5 py-2 bg-indigo-500 hover:bg-indigo-650 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 cursor-pointer"
+                      >
+                        ⏱️ Start Timer
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {isManualTimeFormOpen && (
+                  <form onSubmit={handleAddManualTime} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 animate-[fadeIn_0.2s_ease-out]">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Work Description</label>
+                        <input required type="text" placeholder="e.g. Worked on homepage mockups" value={manualTime.description} onChange={e => setManualTime({...manualTime, description: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Hours</label>
+                          <input type="number" min="0" max="24" placeholder="0" value={manualTime.hours} onChange={e => setManualTime({...manualTime, hours: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors text-center font-bold" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">Minutes</label>
+                          <input type="number" min="0" max="59" placeholder="0" value={manualTime.minutes} onChange={e => setManualTime({...manualTime, minutes: e.target.value})} className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs outline-none focus:border-indigo-500 transition-colors text-center font-bold" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <button type="submit" className="px-6 py-2.5 bg-indigo-500 hover:bg-indigo-650 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer">Add Time Entry</button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-inner">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                        <th className="p-4">Worker</th>
+                        <th className="p-4">Description</th>
+                        <th className="p-4">Duration</th>
+                        <th className="p-4">Date</th>
+                        <th className="p-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900">
+                      {timeLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="p-10 text-center text-slate-500 italic">No tracked hours yet. Start the timer to log work automatically.</td>
+                        </tr>
+                      ) : (
+                        timeLogs.map(log => {
+                          const durationStr = log.end_time 
+                            ? `${Math.floor(log.duration / 3600)}h ${Math.floor((log.duration % 3600) / 60)}m`
+                            : 'Tracking...';
+                          return (
+                            <tr key={log.id} className="hover:bg-slate-900/40 text-slate-200 font-medium">
+                              <td className="p-4 font-bold">{log.userName || 'Freelancer'}</td>
+                              <td className="p-4 text-slate-350">{log.description || 'Working session'}</td>
+                              <td className="p-4 font-bold text-indigo-400">{durationStr}</td>
+                              <td className="p-4 text-slate-500">{new Date(log.start_time).toLocaleDateString()}</td>
+                              <td className="p-4 text-right">
+                                {log.end_time && (user.id === log.user_id || user.role === 'owner') && (
+                                  <button onClick={() => handleDeleteTimeLog(log.id)} className="p-1.5 text-slate-500 hover:text-rose-450 rounded-lg transition-colors cursor-pointer">
+                                    🗑️
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Activity Feed' && (
+              <div className="space-y-6 animate-fadeIn">
+                <h3 className="text-xl font-bold text-white mb-6">Activity Timeline</h3>
+                
+                <div className="relative border-l border-slate-800 pl-6 ml-3 space-y-8 py-4">
+                  {activities.length === 0 ? (
+                    <div className="text-slate-500 italic text-xs pl-2">No activity logs recorded. Actions like files upload, invoice payments and milestone revisions will log feed alerts automatically.</div>
+                  ) : (
+                    activities.map(act => {
+                      const icons = {
+                        created: '📁',
+                        task_completed: '✅',
+                        file_uploaded: '📎',
+                        invoice_paid: '💵',
+                        invoice_generated: '📄',
+                        meeting_scheduled: '📹',
+                        milestone_created: '🎯',
+                        milestone_submitted: '📤',
+                        milestone_approved: '✨',
+                        milestone_revision: '✏️',
+                        contract_sent: '✍️',
+                        contract_signed: '🤝'
+                      };
+                      return (
+                        <div key={act.id} className="relative group">
+                          {/* Timeline Dot */}
+                          <div className="absolute -left-10 top-0.5 w-8 h-8 rounded-full bg-slate-900 border border-slate-855 flex items-center justify-center text-xs shadow-md group-hover:border-indigo-500 transition-colors">
+                            {icons[act.activity_type] || '🔔'}
+                          </div>
+                          
+                          <div>
+                            <p className="text-xs sm:text-sm font-bold text-white">{act.message}</p>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                              <span>By {act.created_by_type}</span>
+                              <span>•</span>
+                              <span>{new Date(act.created_at).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             )}
 

@@ -8,6 +8,8 @@ import Clients from './Clients';
 import Settings from './Settings';
 import Team from './Team';
 import PlanLockBanner from '../components/PlanLockBanner';
+import CalendarView from '../components/CalendarView';
+import WhiteLabelSettings from './WhiteLabelSettings';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -396,11 +398,14 @@ const Dashboard = () => {
         <div className="space-y-2">
           {(() => {
             const tabs = user.role === 'member' 
-              ? ['Overview', 'Projects']
-              : ['Overview', 'Projects', 'Clients', 'Team', 'Settings'];
+              ? ['Overview', 'Projects', 'Calendar']
+              : ['Overview', 'Projects', 'Calendar', 'Clients', 'Team', 'White Label', 'Settings'];
             return tabs.map((item, i) => {
               const isTeamGated = item === 'Team' && user.plan !== 'Agency';
-              const displayName = item === 'Team' && isTeamGated ? 'Team (Agency)' : item === 'Team' ? 'Team' : item;
+              const isWLBGated = item === 'White Label' && user.plan !== 'Agency';
+              let displayName = item;
+              if (item === 'Team' && isTeamGated) displayName = 'Team (Agency)';
+              if (item === 'White Label' && isWLBGated) displayName = 'White Label (Agency)';
               return (
                 <div
                   key={i}
@@ -436,6 +441,7 @@ const Dashboard = () => {
       <div className="flex-1 p-3 sm:p-6 md:p-10 flex flex-col z-10 overflow-y-auto custom-scrollbar">
         {activeTab === 'Overview' && <Overview user={user} onNotificationClick={handleNotificationClick} planLimits={planLimits} onUpgrade={handleUpgradeClick} planVersion={planVersion} />}
         {activeTab === 'Projects' && <Projects user={user} pendingProjectId={pendingProjectId} onClearPending={() => setPendingProjectId(null)} planLimits={planLimits} onUpgrade={handleUpgradeClick} onProjectChange={() => fetchPlanLimits(user.id)} />}
+        {activeTab === 'Calendar' && <CalendarView user={user} onOpenProject={(projId) => { setPendingProjectId(projId); setActiveTab('Projects'); }} />}
         {activeTab === 'Clients' && user.role !== 'member' && <Clients user={user} planLimits={planLimits} onUpgrade={handleUpgradeClick} onClientChange={() => fetchPlanLimits(user.id)} />}
         {activeTab === 'Team' && (
           user.plan === 'Agency' ? (
@@ -446,6 +452,22 @@ const Dashboard = () => {
                 <PlanLockBanner
                   feature="Team Collaboration & Members"
                   description="Invite team members, assign projects, set roles (Admin/Member), and collaborate in group-style chat on the Agency plan."
+                  requiredPlan="Agency"
+                  onUpgrade={handleUpgradeClick}
+                />
+              </div>
+            </div>
+          )
+        )}
+        {activeTab === 'White Label' && (
+          user.plan === 'Agency' ? (
+            <WhiteLabelSettings user={user} />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="max-w-md w-full">
+                <PlanLockBanner
+                  feature="White Label Branding"
+                  description="Customize your client portal with your own logo, primary colors, and a custom subdomain to deliver a premium, client-facing experience."
                   requiredPlan="Agency"
                   onUpgrade={handleUpgradeClick}
                 />

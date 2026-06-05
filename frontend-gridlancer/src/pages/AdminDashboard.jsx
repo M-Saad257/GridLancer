@@ -127,17 +127,20 @@ const AdminDashboard = () => {
     }
   };
 
-  // RESOLVE COMPLAINT
-  const handleResolveComplaint = async (complaintId, adminResponse = '') => {
+  // DISPUTE RESOLUTION ACTIONS
+  const handleDisputeAction = async (complaintId, action, payload = {}) => {
     try {
-      await axios.post(`http://localhost:5000/api/admin/complaints/${complaintId}/resolve`, {
-        admin_response: adminResponse
+      const res = await axios.post(`http://localhost:5000/api/admin/complaints/${complaintId}/action`, {
+        action,
+        reason: payload.reason || '',
+        duration: payload.duration || '1d',
+        admin_response: payload.admin_response || ''
       });
-      showToast('Complaint marked as resolved.', 'success');
+      showToast(res.data.message || 'Action executed successfully.', 'success');
       setResolvingComplaint(null);
       fetchDashboardData(true);
     } catch (err) {
-      showToast('Failed to resolve complaint.', 'error');
+      showToast(err.response?.data?.message || 'Failed to execute action.', 'error');
     }
   };
 
@@ -702,6 +705,7 @@ const AdminDashboard = () => {
                         <th className="py-4 px-6">Name</th>
                         <th className="py-4 px-6">Email</th>
                         <th className="py-4 px-6">Plan</th>
+                        <th className="py-4 px-6">Trust & Warnings</th>
                         <th className="py-4 px-6">Account Status</th>
                         <th className="py-4 px-6">Ban Action</th>
                         <th className="py-4 px-6 text-right">Manage</th>
@@ -710,7 +714,7 @@ const AdminDashboard = () => {
                     <tbody className="divide-y divide-slate-850 text-sm">
                       {filteredFreelancers.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="py-8 text-center text-slate-500">No freelancers found.</td>
+                          <td colSpan="8" className="py-8 text-center text-slate-500">No freelancers found.</td>
                         </tr>
                       ) : (
                         filteredFreelancers.map((free) => {
@@ -728,6 +732,22 @@ const AdminDashboard = () => {
                                 }`}>
                                   {free.plan || 'Starter'}
                                 </span>
+                              </td>
+                              <td className="py-4 px-6">
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-450 font-semibold">Trust Score:</span>
+                                    <span className={`text-xs font-black ${(free.trust_score ?? 100) >= 90 ? 'text-emerald-400' : (free.trust_score ?? 100) >= 70 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                      {free.trust_score ?? 100}/100
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-450 font-semibold">Warnings:</span>
+                                    <span className={`text-xs font-black ${(free.warnings_count ?? 0) >= 3 ? 'text-rose-500 animate-pulse font-extrabold' : (free.warnings_count ?? 0) >= 1 ? 'text-amber-550' : 'text-slate-500'}`}>
+                                      {free.warnings_count ?? 0}
+                                    </span>
+                                  </div>
+                                </div>
                               </td>
                               <td className="py-4 px-2.5">
                                 {isBanned ? (
@@ -983,6 +1003,7 @@ const AdminDashboard = () => {
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 text-center text-xs font-bold uppercase">
                         <th className="py-4 px-6">ID</th>
+                        <th className="py-4 px-6">Category</th>
                         <th className="py-4 px-6">Client</th>
                         <th className="py-4 px-6">Freelancer</th>
                         <th className="py-4 px-6">Project</th>
@@ -995,27 +1016,64 @@ const AdminDashboard = () => {
                     <tbody className="divide-y divide-slate-850 text-sm">
                       {complaints.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="py-8 text-center text-slate-500">No complaints filed by clients.</td>
+                          <td colSpan="9" className="py-8 text-center text-slate-500">No complaints filed by clients.</td>
                         </tr>
                       ) : (
                         complaints.map((comp) => (
                           <tr key={comp.id} className="hover:bg-slate-850/30 transition-colors text-center">
                             <td className="py-4 px-6 text-slate-500 font-bold">#{comp.id}</td>
                             <td className="py-4 px-6">
+                              <span className="px-2.5 py-1 bg-slate-950 border border-slate-850 text-slate-300 text-[10px] font-black uppercase rounded-lg tracking-wider">
+                                {comp.category || 'General'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6">
                               <div className="font-bold text-white">{comp.client_name}</div>
                               <div className="text-[10px] text-slate-500">{comp.client_email}</div>
                             </td>
-                            <td className="py-4 px-6">
+                            <td className="py-4 px-6 text-left">
                               <div className="font-bold text-white">{comp.freelancer_name}</div>
                               <div className="text-[10px] text-slate-500">{comp.freelancer_email}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                  (comp.freelancer_trust_score ?? 100) >= 90 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                  (comp.freelancer_trust_score ?? 100) >= 70 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                  'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                }`}>
+                                  Rep: {comp.freelancer_trust_score ?? 100}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                  (comp.freelancer_warnings_count ?? 0) >= 3 ? 'bg-rose-500/25 text-rose-400 border-rose-500/30 animate-pulse' :
+                                  (comp.freelancer_warnings_count ?? 0) >= 1 ? 'bg-amber-500/25 text-amber-400 border-amber-500/30' :
+                                  'bg-slate-800 text-slate-500 border-slate-700'
+                                }`}>
+                                  Warns: {comp.freelancer_warnings_count ?? 0}
+                                </span>
+                              </div>
                             </td>
                             <td className="py-4 px-6 text-slate-300 font-semibold">{comp.project_title}</td>
                             <td className="py-4 px-6 text-left max-w-xs">
                               <div className="font-bold text-slate-200">{comp.subject}</div>
                               <div className="text-xs text-slate-450 mt-1 whitespace-pre-wrap leading-relaxed">{comp.description}</div>
-                              {comp.status === 'Resolved' && comp.admin_response && (
-                                <div className="mt-2 text-xs bg-slate-950/40 p-2.5 rounded-lg border border-slate-800">
-                                  <span className="font-bold text-indigo-400 block mb-0.5">Admin Response:</span>
+                              {comp.evidence ? (
+                                <div className="mt-2.5">
+                                  <a 
+                                    href={`http://localhost:5000/uploads/${comp.evidence}`}
+                                    download
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/25 text-indigo-400 text-[10px] font-extrabold px-2.5 py-1 rounded-lg transition-all"
+                                  >
+                                    📎 Download Evidence
+                                  </a>
+                                  <span className="text-[9px] text-slate-500 ml-1.5 font-medium block mt-0.5">({comp.evidence_name || 'attached file'})</span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-500 italic block mt-2">No evidence attached</span>
+                              )}
+                              {comp.status !== 'Pending' && comp.admin_response && (
+                                <div className="mt-3 text-xs bg-slate-950/40 p-2.5 rounded-lg border border-slate-800">
+                                  <span className="font-bold text-indigo-400 block mb-0.5">Admin Action Log:</span>
                                   <span className="text-slate-300 whitespace-pre-wrap">{comp.admin_response}</span>
                                 </div>
                               )}
@@ -1023,7 +1081,7 @@ const AdminDashboard = () => {
                             <td className="py-4 px-6 text-slate-400 font-medium">{new Date(comp.created_at).toLocaleString()}</td>
                             <td className="py-4 px-6">
                               <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider inline-block ${
-                                comp.status === 'Resolved' 
+                                comp.status === 'Resolved' || comp.status === 'Rejected'
                                   ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
                                   : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 animate-pulse'
                               }`}>
@@ -1031,18 +1089,18 @@ const AdminDashboard = () => {
                               </span>
                             </td>
                             <td className="py-4 px-6">
-                              {comp.status === 'Pending' ? (
+                              {comp.status === 'Pending' || comp.status === 'Under Review' ? (
                                 <button 
                                   onClick={() => {
                                     setResolvingComplaint(comp);
                                     setAdminResponseText('');
                                   }}
-                                  className="px-3 py-1.5 rounded-lg bg-indigo-500 text-white font-bold text-xs hover:bg-indigo-450 transition-all cursor-pointer shadow shadow-indigo-500/20"
+                                  className="px-3 py-1.5 rounded-lg bg-indigo-500 text-white font-extrabold text-xs hover:bg-indigo-450 transition-all cursor-pointer shadow shadow-indigo-500/20 flex items-center justify-center gap-1 mx-auto"
                                 >
-                                  Mark Resolved
+                                  ⚖️ Manage Dispute
                                 </button>
                               ) : (
-                                <span className="text-xs text-slate-550 font-medium italic">Resolved</span>
+                                <span className="text-xs text-slate-550 font-semibold italic uppercase">Resolved</span>
                               )}
                             </td>
                           </tr>
@@ -1273,48 +1331,210 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-
       {resolvingComplaint && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setResolvingComplaint(null)}></div>
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full relative z-10 animate-fadeIn shadow-2xl">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setResolvingComplaint(null)}></div>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 max-w-2xl w-full relative z-10 animate-fadeIn shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
             <button
               onClick={() => setResolvingComplaint(null)}
               className="absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-750 p-2 rounded-full transition-all cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <h3 className="text-xl font-bold text-white mb-2">Resolve Complaint #{resolvingComplaint.id}</h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Filed by <strong>{resolvingComplaint.client_name}</strong> against <strong>{resolvingComplaint.freelancer_name}</strong>.
-            </p>
-            <div className="mb-4 bg-slate-950 p-3 rounded-xl border border-slate-850 text-xs max-h-36 overflow-y-auto custom-scrollbar">
-              <div className="font-semibold text-slate-350">Subject: {resolvingComplaint.subject}</div>
-              <div className="text-slate-400 mt-1 whitespace-pre-wrap">{resolvingComplaint.description}</div>
+            
+            <span className="px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-black uppercase rounded-lg tracking-wider">
+              Dispute Resolution Panel
+            </span>
+            <h3 className="text-xl font-black text-white mt-2 mb-4">Complaint Case #{resolvingComplaint.id}</h3>
+            
+            {/* Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-left">
+              <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-850">
+                <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block mb-2">Dispute Target (Freelancer)</span>
+                <div className="text-sm font-bold text-white">{resolvingComplaint.freelancer_name}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{resolvingComplaint.freelancer_email}</div>
+                
+                {/* Standing */}
+                <div className="flex gap-4 mt-3 pt-3 border-t border-slate-900">
+                  <div>
+                    <div className="text-[9px] text-slate-500 font-bold uppercase">Reputation / Trust</div>
+                    <div className={`text-sm font-black mt-0.5 ${
+                      (resolvingComplaint.freelancer_trust_score ?? 100) >= 90 ? 'text-emerald-400' :
+                      (resolvingComplaint.freelancer_trust_score ?? 100) >= 70 ? 'text-amber-400' :
+                      'text-rose-400'
+                    }`}>
+                      {resolvingComplaint.freelancer_trust_score ?? 100}/100
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 font-bold uppercase">Active Warnings</div>
+                    <div className={`text-sm font-black mt-0.5 ${
+                      (resolvingComplaint.freelancer_warnings_count ?? 0) >= 3 ? 'text-rose-500 font-extrabold animate-pulse' :
+                      (resolvingComplaint.freelancer_warnings_count ?? 0) >= 1 ? 'text-amber-450' :
+                      'text-slate-500'
+                    }`}>
+                      {resolvingComplaint.freelancer_warnings_count ?? 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-850">
+                <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block mb-2">Filing Party (Client)</span>
+                <div className="text-sm font-bold text-white">{resolvingComplaint.client_name}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{resolvingComplaint.client_email}</div>
+                
+                <div className="mt-3 pt-3 border-t border-slate-900 flex justify-between items-center">
+                  <div>
+                    <div className="text-[9px] text-slate-500 font-bold uppercase">Project Title</div>
+                    <div className="text-xs font-semibold text-slate-300 mt-0.5">{resolvingComplaint.project_title}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-550 font-bold uppercase text-right">Category</div>
+                    <div className="text-[10px] font-black text-indigo-400 uppercase bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-md mt-0.5">
+                      {resolvingComplaint.category || 'General'}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-4">
+
+            {/* Description & Evidence */}
+            <div className="mb-6 bg-slate-950/60 p-4 rounded-2xl border border-slate-850 text-xs text-left">
+              <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider block mb-1">Complaint Content</span>
+              <div className="font-semibold text-slate-200 mb-1">Subject: {resolvingComplaint.subject}</div>
+              <div className="text-slate-400 whitespace-pre-wrap leading-relaxed">{resolvingComplaint.description}</div>
+              {resolvingComplaint.evidence && (
+                <div className="mt-3 pt-3 border-t border-slate-900 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500">Evidence Attached: {resolvingComplaint.evidence_name}</span>
+                  <a 
+                    href={`http://localhost:5000/uploads/${resolvingComplaint.evidence}`}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/25 text-indigo-400 rounded-lg text-[10px] font-extrabold transition-all"
+                  >
+                    📎 Download Evidence
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Form & Actions */}
+            <div className="space-y-4 text-left">
               <div>
-                <label className="block text-xs font-semibold text-slate-350 mb-1.5 uppercase tracking-wider">Custom Message/Resolution Response</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Admin Resolution Statement / Action Notes (Required)</label>
                 <textarea
                   value={adminResponseText}
                   onChange={(e) => setAdminResponseText(e.target.value)}
-                  placeholder="Enter custom response to send to the client..."
-                  rows={4}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors custom-scrollbar"
+                  placeholder="Explain the rationale for this action. This will be logged as system feedback."
+                  rows={3}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-200 placeholder-slate-650 focus:outline-none focus:border-indigo-500 transition-colors custom-scrollbar font-medium"
                 ></textarea>
               </div>
-              <div className="flex gap-3 mt-4">
+
+              {/* Action Buttons Grid */}
+              <div className="space-y-3">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Dispute Actions (Select one to execute)</span>
+                
+                {/* 1. Warn / Clarify / Resolve / Reject */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <button
+                    onClick={() => {
+                      if (!adminResponseText.trim()) return alert("Please enter action notes explaining the warning.");
+                      handleDisputeAction(resolvingComplaint.id, 'warn', { reason: adminResponseText });
+                    }}
+                    className="py-2.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center"
+                  >
+                    ⚠️ Warn Freelancer
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (!adminResponseText.trim()) return alert("Please enter the clarification request content.");
+                      handleDisputeAction(resolvingComplaint.id, 'clarify', { admin_response: adminResponseText });
+                    }}
+                    className="py-2.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center"
+                  >
+                    💬 Ask Clarification
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const notes = adminResponseText.trim() || 'Resolved by admin';
+                      handleDisputeAction(resolvingComplaint.id, 'resolve', { admin_response: notes });
+                    }}
+                    className="py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center"
+                  >
+                    ✅ Resolve Case
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const notes = adminResponseText.trim() || 'Complaint rejected';
+                      handleDisputeAction(resolvingComplaint.id, 'reject', { admin_response: notes });
+                    }}
+                    className="py-2.5 px-3 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center"
+                  >
+                    ❌ Reject Case
+                  </button>
+                </div>
+
+                {/* 2. Ban Controls */}
+                <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-850 space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block">Account Restriction Controls</span>
+                      <p className="text-[10px] text-slate-500">Apply temporary restriction or permanent system ban.</p>
+                    </div>
+                    
+                    {/* Duration Select */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Duration:</span>
+                      <select
+                        id="modal-ban-duration"
+                        className="px-2 py-1.5 bg-slate-900 border border-slate-850 rounded-lg text-xs font-semibold text-slate-350 focus:outline-none [color-scheme:dark]"
+                      >
+                        <option value="1d">1 Day Restriction</option>
+                        <option value="1w">1 Week Restriction</option>
+                        <option value="1m">1 Month Restriction</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        if (!adminResponseText.trim()) return alert("Please enter the reason for restriction.");
+                        const duration = document.getElementById("modal-ban-duration").value;
+                        handleDisputeAction(resolvingComplaint.id, 'restrict', { reason: adminResponseText, duration });
+                      }}
+                      className="py-3 px-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/25 hover:border-orange-500/40 text-orange-400 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center shadow shadow-orange-500/5"
+                    >
+                      ⏳ Restrict Account
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        if (!adminResponseText.trim()) return alert("Please enter the reason for the permanent ban.");
+                        handleDisputeAction(resolvingComplaint.id, 'ban', { reason: adminResponseText });
+                      }}
+                      className="py-3 px-4 bg-rose-500/20 hover:bg-rose-500/35 border border-rose-500/30 hover:border-rose-500/50 text-rose-455 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center shadow shadow-rose-500/5"
+                    >
+                      🚫 Permanent Ban
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Close Panel button */}
+              <div className="pt-2 flex justify-end">
                 <button
+                  type="button"
                   onClick={() => setResolvingComplaint(null)}
-                  className="flex-1 py-3 px-4 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 transition-colors rounded-xl text-xs font-bold cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent hover:border-slate-800 transition-all cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleResolveComplaint(resolvingComplaint.id, adminResponseText)}
-                  className="flex-1 py-3 px-4 bg-indigo-500 hover:bg-indigo-450 text-white transition-all rounded-xl text-xs font-black cursor-pointer shadow shadow-indigo-500/25"
-                >
-                  Submit & Resolve
+                  Cancel & Close Panel
                 </button>
               </div>
             </div>
@@ -1335,7 +1555,6 @@ const AdminDashboard = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
       `}</style>
-
     </div>
   );
 };

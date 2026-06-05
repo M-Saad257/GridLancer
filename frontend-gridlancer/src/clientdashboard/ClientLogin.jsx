@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -7,6 +7,10 @@ const ClientLogin = () => {
   const [toastMessage, setToastMessage] = useState({ title: '', desc: '', type: 'success' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Branding state
+  const [branding, setBranding] = useState({ logo_url: null, primary_color: '#6366f1', subdomain: null });
+  const [emailInput, setEmailInput] = useState('');
+
   // Ban modal state
   const [banModal, setBanModal] = useState({
     show: false,
@@ -17,6 +21,32 @@ const ClientLogin = () => {
   const [requestSending, setRequestSending] = useState(false);
   
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(window.location.search);
+  const whiteLabelParam = searchParams.get('whiteLabel');
+
+  useEffect(() => {
+    if (whiteLabelParam) {
+      axios.get(`http://localhost:5000/api/white-label/${whiteLabelParam}`)
+        .then(res => {
+          if (res.data) {
+            setBranding(res.data);
+          }
+        })
+        .catch(err => console.error("Error loading client login white label settings:", err));
+    }
+  }, [whiteLabelParam]);
+
+  const handleEmailBlur = async (emailVal) => {
+    if (!emailVal || !emailVal.includes('@')) return;
+    try {
+      const res = await axios.get(`http://localhost:5000/api/white-label/by-email?email=${emailVal}`);
+      if (res.data) {
+        setBranding(res.data);
+      }
+    } catch (err) {
+      console.log("No custom agency branding found for this client email.");
+    }
+  };
 
   const handleRequestUnban = async () => {
     setRequestSending(true);
@@ -66,7 +96,12 @@ const ClientLogin = () => {
       form.reset();
       
       setTimeout(() => {
-        navigate(`/client/dashboard`);
+        // Carry over the preview whiteLabel param if present
+        if (whiteLabelParam) {
+          navigate(`/client/dashboard?whiteLabel=${whiteLabelParam}`);
+        } else {
+          navigate(`/client/dashboard`);
+        }
       }, 1500);
 
     } catch (error) {
@@ -95,14 +130,40 @@ const ClientLogin = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+      {/* Background Gradients (Themed dynamically) */}
+      <div 
+        className="absolute top-0 right-0 w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-all duration-700"
+        style={{ backgroundColor: `${branding.primary_color || '#6366f1'}12` }}
+      ></div>
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-650/5 blur-[120px] rounded-full pointer-events-none"></div>
       
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
-        <Link to="/" className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">GridLancer</Link>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">Client Portal Login</h2>
-        <p className="mt-2 text-center text-sm text-slate-400">
-          Enter the credentials provided by your freelancer
+        <div className="flex flex-col items-center justify-center gap-3">
+          {branding.logo_url ? (
+            <img 
+              src={branding.logo_url} 
+              alt="Agency Logo" 
+              className="max-h-16 max-w-[200px] object-contain mb-2 animate-fadeIn" 
+            />
+          ) : (
+            <Link to="/" className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary-brand-color,#6366f1)] to-purple-400">
+              GridLancer
+            </Link>
+          )}
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-black text-white tracking-tight">
+          {branding.subdomain ? (
+            <span className="capitalize">{branding.subdomain} Client Login</span>
+          ) : (
+            "Client Portal Login"
+          )}
+        </h2>
+        <p className="mt-2 text-center text-xs text-slate-450 font-medium leading-relaxed">
+          {branding.subdomain ? (
+            `Welcome to ${branding.subdomain}'s workspace. Enter your credentials to access your project portal.`
+          ) : (
+            "Enter the client workspace access credentials provided by your agency."
+          )}
         </p>
       </div>
 
@@ -110,33 +171,57 @@ const ClientLogin = () => {
         <div className="bg-slate-900 py-8 px-4 shadow-2xl shadow-indigo-500/10 sm:rounded-3xl sm:px-10 border border-slate-800">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300">
+              <label htmlFor="email" className="block text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">
                 Email address
               </label>
               <div className="mt-1">
-                <input id="email" name="email" type="email" required className="appearance-none block w-full px-4 py-3 border border-slate-700 rounded-xl shadow-sm placeholder-slate-500 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors bg-slate-950" placeholder="client@company.com" />
+                <input 
+                  id="email" 
+                  name="email" 
+                  type="email" 
+                  required 
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onBlur={() => handleEmailBlur(emailInput)}
+                  className="appearance-none block w-full px-4 py-3 border border-slate-800 focus:border-[var(--primary-brand-color)] rounded-xl shadow-sm placeholder-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-[var(--primary-brand-color)] sm:text-sm transition-all bg-slate-950/80 font-medium" 
+                  placeholder="client@company.com" 
+                />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+              <label htmlFor="password" className="block text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">
                 Access Password
               </label>
               <div className="mt-1">
-                <input id="password" name="password" type="password" required className="appearance-none block w-full px-4 py-3 border border-slate-700 rounded-xl shadow-sm placeholder-slate-500 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors bg-slate-950" placeholder="********" />
+                <input 
+                  id="password" 
+                  name="password" 
+                  type="password" 
+                  required 
+                  className="appearance-none block w-full px-4 py-3 border border-slate-800 focus:border-[var(--primary-brand-color)] rounded-xl shadow-sm placeholder-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-[var(--primary-brand-color)] sm:text-sm transition-all bg-slate-950/80 font-medium" 
+                  placeholder="********" 
+                />
               </div>
             </div>
 
             <div className="flex justify-end">
-              <div className="text-sm">
-                <Link to="/login" className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
+              <div className="text-xs">
+                <Link to="/login" className="font-semibold text-[var(--primary-brand-color,#6366f1)] hover:text-indigo-400 transition-colors">
                   Are you a freelancer? Login here
                 </Link>
               </div>
             </div>
 
             <div>
-              <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/25 text-sm font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+              <button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-[var(--primary-brand-color,#6366f1)] to-indigo-650 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-brand-color,#6366f1)] transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: `linear-gradient(135deg, ${branding.primary_color || '#6366f1'}, ${branding.primary_color ? branding.primary_color + 'cc' : '#4f46e5'})`
+                }}
+              >
                 {isSubmitting ? 'Authenticating...' : 'Access Portal'}
               </button>
             </div>
@@ -217,6 +302,32 @@ const ClientLogin = () => {
           </div>
         </div>
       )}
+
+      {/* Dynamic Style Overrides for Client Theming */}
+      <style>{`
+        :root {
+          --primary-brand-color: ${branding.primary_color || '#6366f1'};
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.4s ease forwards; }
+
+        /* Dynamic styling overrides */
+        .text-indigo-400, .text-indigo-500 {
+          color: var(--primary-brand-color) !important;
+        }
+        .focus\\:ring-indigo-500:focus, .focus\\:ring-[var(--primary-brand-color)]:focus {
+          --tw-ring-color: var(--primary-brand-color) !important;
+        }
+        .focus\\:border-indigo-500:focus, .focus\\:border-[var(--primary-brand-color)]:focus {
+          border-color: var(--primary-brand-color) !important;
+        }
+        .shadow-indigo-500\\/10 {
+          --tw-shadow-color: color-mix(in srgb, var(--primary-brand-color) 10%, transparent) !important;
+        }
+        .shadow-indigo-500\\/25 {
+          --tw-shadow-color: color-mix(in srgb, var(--primary-brand-color) 25%, transparent) !important;
+        }
+      `}</style>
     </div>
   );
 };

@@ -209,6 +209,51 @@ const Team = ({ user, planLimits, onUpgrade }) => {
                 </div>
               </div>
 
+              {/* Workload Indicator Component */}
+              {(() => {
+                const activeProjects = member.activeProjects || 0;
+                const activeTasks = member.activeTasks || 0;
+                const workloadPercent = (activeProjects * 20) + (activeTasks * 5);
+                return (
+                  <div className="flex-1 flex flex-col gap-1 w-full sm:max-w-xs sm:mx-6 bg-slate-950/45 p-3 rounded-xl border border-slate-800/40">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-semibold flex items-center gap-1.5">
+                        📊 Workload
+                        {workloadPercent >= 80 && (
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                            workloadPercent >= 90 
+                              ? 'bg-rose-500/10 border border-rose-500/20 text-rose-400 animate-pulse' 
+                              : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                          }`}>
+                            {workloadPercent >= 90 ? 'Overloaded' : 'Heavy Load'}
+                          </span>
+                        )}
+                      </span>
+                      <span className={`font-bold ${
+                        workloadPercent >= 90 ? 'text-rose-400' :
+                        workloadPercent >= 80 ? 'text-amber-400' :
+                        workloadPercent >= 50 ? 'text-indigo-400' : 'text-emerald-400'
+                      }`}>{workloadPercent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          workloadPercent >= 90 ? 'bg-gradient-to-r from-rose-500 to-red-600 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                          workloadPercent >= 80 ? 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-[0_0_8px_rgba(245,158,11,0.3)]' :
+                          workloadPercent >= 50 ? 'bg-gradient-to-r from-indigo-500 to-purple-600' :
+                          'bg-gradient-to-r from-emerald-500 to-teal-600'
+                        }`}
+                        style={{ width: `${Math.min(workloadPercent, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-500 font-bold tracking-tight">
+                      <span>{activeProjects} Active Project{activeProjects !== 1 ? 's' : ''}</span>
+                      <span>{activeTasks} Active Task{activeTasks !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
                 <div className="flex flex-col items-end">
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Role</span>

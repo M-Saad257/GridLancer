@@ -1,10 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Settings = ({ user, onUserUpdate }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', desc: '', type: 'success' });
+  const [preferences, setPreferences] = useState({
+    projects: true,
+    invoices: true,
+    meetings: true,
+    milestones: true,
+    contracts: true,
+    files: true,
+    messages: true
+  });
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchPrefs = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/email-preferences?userId=${user.id}`);
+        if (res.data) {
+          setPreferences(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch email preferences:", err);
+      } finally {
+        setLoadingPrefs(false);
+      }
+    };
+    fetchPrefs();
+  }, [user?.id]);
+
+  const handleTogglePref = (category) => {
+    setPreferences(prev => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      await axios.put(`http://localhost:5000/api/email-preferences`, {
+        userId: user.id,
+        preferences
+      });
+      setToastMessage({
+        title: 'Preferences Updated',
+        desc: 'Email preferences saved successfully!',
+        type: 'success'
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+    } catch (err) {
+      console.error("Failed to save email preferences:", err);
+      setToastMessage({
+        title: 'Error Saving',
+        desc: 'Could not update email preferences.',
+        type: 'error'
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    }
+  };
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -162,6 +219,61 @@ const Settings = ({ user, onUserUpdate }) => {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xl mt-6 sm:mt-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none"></div>
+        
+        <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Email Notifications</h3>
+        <p className="text-xs sm:text-sm text-slate-400 font-medium mb-6">Choose which alerts you want to receive directly in your email inbox.</p>
+
+        {loadingPrefs ? (
+          <div className="py-4 text-slate-400 animate-pulse text-sm font-semibold">Loading preferences...</div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { key: 'projects', label: 'Project Status & Details Updates', desc: 'When projects are created or progress status is updated.' },
+                { key: 'invoices', label: 'Invoice & Payment Receipts', desc: 'When invoices are created, paid, or due soon.' },
+                { key: 'meetings', label: 'Video Meetings Notifications', desc: 'When team members schedule new video calls.' },
+                { key: 'milestones', label: 'Milestone Deliverable Reviews', desc: 'When milestones require approval or revision.' },
+                { key: 'contracts', label: 'Digital Contract Signatures', desc: 'When digital contracts are sent, accepted, or rejected.' },
+                { key: 'files', label: 'New Files & Assets Uploads', desc: 'When new files are attached to the project.' },
+                { key: 'messages', label: 'Offline Direct Messages', desc: 'When you receive chat messages while offline.' }
+              ].map(pref => (
+                <div 
+                  key={pref.key} 
+                  onClick={() => handleTogglePref(pref.key)}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                    preferences[pref.key] 
+                      ? 'bg-indigo-500/5 border-indigo-500/30' 
+                      : 'bg-slate-950/40 border-slate-850 hover:border-slate-800'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <div className="text-xs sm:text-sm font-bold text-white mb-0.5">{pref.label}</div>
+                    <div className="text-[10px] text-slate-500 leading-normal">{pref.desc}</div>
+                  </div>
+                  
+                  {/* Custom Checkbox/Switch */}
+                  <div className={`w-9 h-5 rounded-full p-0.5 transition-all ${preferences[pref.key] ? 'bg-indigo-500' : 'bg-slate-800'}`}>
+                    <div className={`w-4 h-4 bg-white rounded-full transition-all transform ${preferences[pref.key] ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-800 mt-6">
+              <button 
+                type="button"
+                onClick={handleSavePreferences}
+                className="w-full sm:w-auto bg-indigo-500 hover:bg-indigo-650 text-white px-6 sm:px-8 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 cursor-pointer text-center"
+              >
+                Save Preferences
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 sm:mt-8 bg-rose-500/5 border border-rose-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-8 relative overflow-hidden group">

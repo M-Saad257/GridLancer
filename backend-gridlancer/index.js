@@ -20,6 +20,10 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
+
+db.on("error", (err) => {
+  console.error("Database connection error captured:", err.message || err);
+});
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
@@ -27,7 +31,8 @@ const fs = require("fs");
 const path = require("path");
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 io.on("connection", (socket) => {
   console.log("A user connected via socket:", socket.id);
@@ -121,6 +126,78 @@ const PLAN_LIMITS = {
 };
 const getPlanLimits = (plan) => PLAN_LIMITS[plan] || PLAN_LIMITS['Starter'];
 
+// ================================
+// CORE UTILITIES (Activity Logging & Smart Emails)
+// ================================
+const logProjectActivity = (projectId, activityType, message, createdByType, createdById) => {
+  const sql = "INSERT INTO project_activities (project_id, activity_type, message, created_by_type, created_by_id) VALUES (?, ?, ?, ?, ?)";
+  db.query(sql, [projectId, activityType, message, createdByType, createdById], (err, res) => {
+    if (err) {
+      console.log("Error logging project activity:", err);
+    } else {
+      io.to("project_" + projectId).emit("project_activity_added", {
+        id: res.insertId,
+        project_id: projectId,
+        activity_type: activityType,
+        message,
+        created_by_type: createdByType,
+        created_by_id: createdById,
+        created_at: new Date()
+      });
+      io.to("project_" + projectId).emit("project_details_updated");
+      // Notify client/user lists to refresh
+      db.query("SELECT user_id, client_id FROM projects WHERE id = ?", [projectId], (e, projRows) => {
+        if (!e && projRows.length > 0) {
+          io.to("user_" + projRows[0].user_id).emit("project_list_updated");
+          io.to("client_" + projRows[0].client_id).emit("project_list_updated");
+        }
+      });
+    }
+  });
+};
+
+const sendSmartEmail = (recipientId, recipientType, category, subject, body) => {
+  const idCol = recipientType === 'client' ? 'client_id' : 'user_id';
+  const table = recipientType === 'client' ? 'clients' : 'users';
+
+  db.query(`SELECT email FROM ${table} WHERE id = ?`, [recipientId], (err, rows) => {
+    if (err || rows.length === 0) {
+      console.log(`SmartEmail error: Recipient ${recipientType} with ID ${recipientId} not found.`);
+      return;
+    }
+    const email = rows[0].email;
+
+    const prefSql = `SELECT enabled FROM email_preferences WHERE ${idCol} = ? AND category = ?`;
+    db.query(prefSql, [recipientId, category], (prefErr, prefRows) => {
+      const enabled = (prefRows && prefRows.length > 0) ? prefRows[0].enabled === 1 : true;
+
+      if (!enabled) {
+        console.log(`[EMAIL SUPPRESSED] Preference disabled for Category: ${category}, Recipient: ${email}`);
+        return;
+      }
+
+      db.query("INSERT INTO mock_emails (recipient_email, category, subject, body) VALUES (?, ?, ?, ?)",
+        [email, category, subject, body], (insertErr) => {
+          if (insertErr) console.log("Error writing mock email log:", insertErr);
+          else {
+            // Emit mock email sent so dev panel updates
+            io.to(recipientType === 'client' ? "client_" + recipientId : "user_" + recipientId).emit("mock_email_sent");
+          }
+        });
+
+      console.log(`
+========================================
+[EMAIL SENT]
+To: ${email}
+Category: ${category}
+Subject: ${subject}
+Body: ${body}
+========================================
+      `);
+    });
+  });
+};
+
 app.get("/", (req, res) => {
   res.send("GridLancer API Running...");
 });
@@ -170,6 +247,18 @@ const runMigrations = () => {
         else console.log("Added 'role' column to users.");
       });
     }
+    if (!cols.includes('warnings_count')) {
+      db.query("ALTER TABLE users ADD COLUMN warnings_count INT DEFAULT 0", (err) => {
+        if (err) console.log("Error adding warnings_count column to users:", err);
+        else console.log("Added 'warnings_count' column to users.");
+      });
+    }
+    if (!cols.includes('trust_score')) {
+      db.query("ALTER TABLE users ADD COLUMN trust_score INT DEFAULT 100", (err) => {
+        if (err) console.log("Error adding trust_score column to users:", err);
+        else console.log("Added 'trust_score' column to users.");
+      });
+    }
   });
 
   // Check clients table columns
@@ -195,6 +284,21 @@ const runMigrations = () => {
       db.query("ALTER TABLE clients ADD COLUMN unban_requested TINYINT DEFAULT 0", (err) => {
         if (err) console.log("Error adding unban_requested column to clients:", err);
         else console.log("Added 'unban_requested' column to clients.");
+      });
+    }
+  });
+
+  // Check invoices table columns
+  db.query("DESCRIBE invoices", (err, fields) => {
+    if (err) {
+      console.log("Error describing invoices table:", err);
+      return;
+    }
+    const cols = fields.map(f => f.Field);
+    if (!cols.includes('due_date')) {
+      db.query("ALTER TABLE invoices ADD COLUMN due_date DATE DEFAULT NULL", (err) => {
+        if (err) console.log("Error adding due_date column to invoices:", err);
+        else console.log("Added 'due_date' column to invoices.");
       });
     }
   });
@@ -261,6 +365,24 @@ const runMigrations = () => {
             else console.log("Added 'admin_response' column to complaints.");
           });
         }
+        if (!cols.includes('category')) {
+          db.query("ALTER TABLE complaints ADD COLUMN category VARCHAR(100) DEFAULT 'General'", (err) => {
+            if (err) console.log("Error adding category column to complaints:", err);
+            else console.log("Added 'category' column to complaints.");
+          });
+        }
+        if (!cols.includes('evidence')) {
+          db.query("ALTER TABLE complaints ADD COLUMN evidence VARCHAR(255) DEFAULT NULL", (err) => {
+            if (err) console.log("Error adding evidence column to complaints:", err);
+            else console.log("Added 'evidence' column to complaints.");
+          });
+        }
+        if (!cols.includes('evidence_name')) {
+          db.query("ALTER TABLE complaints ADD COLUMN evidence_name VARCHAR(255) DEFAULT NULL", (err) => {
+            if (err) console.log("Error adding evidence_name column to complaints:", err);
+            else console.log("Added 'evidence_name' column to complaints.");
+          });
+        }
       });
     }
   });
@@ -296,6 +418,171 @@ const runMigrations = () => {
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`, (err) => {
     if (err) console.log("Error creating project_assignments table:", err);
+  });
+
+  // NEW FEATURE TABLES:
+  // Create Milestones Table
+  db.query(`CREATE TABLE IF NOT EXISTS milestones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    amount DECIMAL(10,2) DEFAULT NULL,
+    status VARCHAR(50) DEFAULT 'Pending',
+    deadline DATE DEFAULT NULL,
+    invoice_id INT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating milestones table:", err);
+  });
+
+  // Create Meetings Table
+  db.query(`CREATE TABLE IF NOT EXISTS meetings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    scheduled_at DATETIME NOT NULL,
+    duration INT DEFAULT 30,
+    room_name VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating meetings table:", err);
+  });
+
+  // Create Project Activities Table
+  db.query(`CREATE TABLE IF NOT EXISTS project_activities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    activity_type VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    created_by_type VARCHAR(50) NOT NULL,
+    created_by_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating project_activities table:", err);
+  });
+
+  // Create Email Preferences Table
+  db.query(`CREATE TABLE IF NOT EXISTS email_preferences (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT DEFAULT NULL,
+    client_id INT DEFAULT NULL,
+    category VARCHAR(100) NOT NULL,
+    enabled TINYINT DEFAULT 1,
+    UNIQUE KEY unique_user_cat (user_id, category),
+    UNIQUE KEY unique_client_cat (client_id, category)
+  )`, (err) => {
+    if (err) console.log("Error creating email_preferences table:", err);
+  });
+
+  // Create Mock Emails Table
+  db.query(`CREATE TABLE IF NOT EXISTS mock_emails (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_email VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) console.log("Error creating mock_emails table:", err);
+  });
+
+  // Create Recurring Invoices Table
+  db.query(`CREATE TABLE IF NOT EXISTS recurring_invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    frequency VARCHAR(50) NOT NULL,
+    next_date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'Active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating recurring_invoices table:", err);
+  });
+
+  // Create Time Entries Table
+  db.query(`CREATE TABLE IF NOT EXISTS time_entries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    user_id INT NOT NULL,
+    description VARCHAR(255) DEFAULT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME DEFAULT NULL,
+    duration INT DEFAULT 0,
+    is_manual TINYINT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating time_entries table:", err);
+  });
+
+  // Create Templates Tables
+  db.query(`CREATE TABLE IF NOT EXISTS project_templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT DEFAULT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) console.log("Error creating project_templates table:", err);
+  });
+
+  db.query(`CREATE TABLE IF NOT EXISTS template_tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    template_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    weight INT DEFAULT 0,
+    FOREIGN KEY (template_id) REFERENCES project_templates(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating template_tasks table:", err);
+  });
+
+  db.query(`CREATE TABLE IF NOT EXISTS template_milestones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    template_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    amount DECIMAL(10,2) DEFAULT NULL,
+    suggested_days INT DEFAULT 7,
+    FOREIGN KEY (template_id) REFERENCES project_templates(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating template_milestones table:", err);
+  });
+
+  // Create Contracts Table
+  db.query(`CREATE TABLE IF NOT EXISTS contracts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    terms TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    payment_terms TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'Pending',
+    digital_signature VARCHAR(255) DEFAULT NULL,
+    signed_at DATETIME DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating contracts table:", err);
+  });
+
+  // Create White Label settings table
+  db.query(`CREATE TABLE IF NOT EXISTS white_label_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    logo_url LONGTEXT DEFAULT NULL,
+    primary_color VARCHAR(50) DEFAULT '#6366f1',
+    subdomain VARCHAR(255) DEFAULT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`, (err) => {
+    if (err) console.log("Error creating white_label_settings table:", err);
   });
 };
 
@@ -610,6 +897,17 @@ app.post("/api/projects", async (req, res) => {
           db.query(taskSql, [defaultTasks], (taskErr) => {
             if (taskErr) console.log("Error inserting default tasks", taskErr);
 
+            // Log Project Activity & Smart Email Alerts
+            logProjectActivity(projectId, 'created', `Project "${title}" created`, 'freelancer', user_id);
+            sendSmartEmail(client_id, 'client', 'projects', `New Project Created - ${title}`, 
+              `Hello,\n\nA new project "${title}" has been created for you.\n\nDeadline: ${deadline || 'Not set'}\n\nPlease login to view details.`);
+            if (Array.isArray(assignedTo)) {
+              assignedTo.forEach(uid => {
+                sendSmartEmail(uid, 'user', 'projects', `New Project Assigned - ${title}`, 
+                  `Hello,\n\nYou have been assigned to a new project: "${title}".\n\nPlease check your workspace.`);
+              });
+            }
+
             // Emit real-time project list updates
             io.to("user_" + ownerId).emit("project_list_updated");
             if (Array.isArray(assignedTo)) {
@@ -766,9 +1064,61 @@ app.get("/api/teams/members/:userId", (req, res) => {
         
         db.query("SELECT id, name, email, image, 'owner' as role, status FROM users WHERE id = ?", [teamRows[0].owner_id], (err3, ownerRows) => {
           const owner = ownerRows.length > 0 ? ownerRows[0] : null;
-          response.json({
-            team: teamRows[0],
-            members: owner ? [owner, ...members] : members
+          const allMembers = owner ? [owner, ...members] : members;
+          
+          if (allMembers.length === 0) {
+            return response.json({ team: teamRows[0], members: [] });
+          }
+          
+          const userIds = allMembers.map(m => m.id);
+          
+          // Query active projects count
+          const projSql = `
+            SELECT pa.user_id, COUNT(DISTINCT pa.project_id) as active_projects
+            FROM project_assignments pa
+            JOIN projects p ON pa.project_id = p.id
+            WHERE pa.user_id IN (?) AND p.status != 'Completed'
+            GROUP BY pa.user_id
+          `;
+          
+          db.query(projSql, [userIds], (projErr, projRes) => {
+            if (projErr) return response.status(500).json({ message: "Error fetching active projects count" });
+            
+            // Query active tasks count
+            const taskSql = `
+              SELECT pa.user_id, COUNT(DISTINCT pt.id) as active_tasks
+              FROM project_assignments pa
+              JOIN projects p ON pa.project_id = p.id
+              JOIN project_tasks pt ON p.id = pt.project_id
+              WHERE pa.user_id IN (?) AND p.status != 'Completed' AND pt.is_completed = 0
+              GROUP BY pa.user_id
+            `;
+            
+            db.query(taskSql, [userIds], (taskErr, taskRes) => {
+              if (taskErr) return response.status(500).json({ message: "Error fetching active tasks count" });
+              
+              const projectCounts = {};
+              const taskCounts = {};
+              
+              projRes.forEach(row => {
+                projectCounts[row.user_id] = row.active_projects;
+              });
+              
+              taskRes.forEach(row => {
+                taskCounts[row.user_id] = row.active_tasks;
+              });
+              
+              const enrichedMembers = allMembers.map(m => ({
+                ...m,
+                activeProjects: projectCounts[m.id] || 0,
+                activeTasks: taskCounts[m.id] || 0
+              }));
+              
+              response.json({
+                team: teamRows[0],
+                members: enrichedMembers
+              });
+            });
           });
         });
       });
@@ -930,24 +1280,34 @@ app.get("/api/projects/:id/invoices", (req, res) => {
 // POST invoice to a project
 app.post("/api/projects/:id/invoices", (req, res) => {
   const projectId = req.params.id;
-  const { title, amount } = req.body;
-  const sql = "INSERT INTO invoices (project_id, title, amount) VALUES (?, ?, ?)";
-  db.query(sql, [projectId, title, amount], (err, result) => {
+  const { title, amount, due_date } = req.body;
+  const computedDueDate = due_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const sql = "INSERT INTO invoices (project_id, title, amount, due_date) VALUES (?, ?, ?, ?)";
+  db.query(sql, [projectId, title, amount, computedDueDate], (err, result) => {
     if (err) return res.status(500).json({ message: "Error creating invoice" });
+
+    const invoiceId = result.insertId;
 
     // Emit live update for project invoices
     io.to("project_" + projectId).emit("project_details_updated");
-    db.query("SELECT user_id, client_id FROM projects WHERE id = ?", [projectId], (err, projData) => {
+    db.query("SELECT user_id, client_id, title as projectTitle FROM projects WHERE id = ?", [projectId], (err, projData) => {
       if (!err && projData.length > 0) {
-        io.to("user_" + projData[0].user_id).emit("project_list_updated");
-        io.to("user_" + projData[0].user_id).emit("stats_updated");
-        io.to("client_" + projData[0].client_id).emit("project_list_updated");
-        io.to("client_" + projData[0].client_id).emit("stats_updated");
+        const { user_id, client_id, projectTitle } = projData[0];
+        io.to("user_" + user_id).emit("project_list_updated");
+        io.to("user_" + user_id).emit("stats_updated");
+        io.to("client_" + client_id).emit("project_list_updated");
+        io.to("client_" + client_id).emit("stats_updated");
+
+        // Log project activity and smart email
+        logProjectActivity(projectId, 'invoice_generated', `Invoice "${title}" ($${amount}) created. Due on ${new Date(computedDueDate).toLocaleDateString()}`, 'freelancer', user_id);
+        sendSmartEmail(client_id, 'client', 'invoices', `New Invoice Generated - ${title}`, 
+          `Hello,\n\nA new invoice has been generated for your project "${projectTitle}".\n\nTitle: ${title}\nAmount: $${amount}\nDue Date: ${new Date(computedDueDate).toLocaleDateString()}\n\nPlease login to GridLancer to pay.`);
       }
     });
     io.to("admins").emit("refresh_admin_dashboard");
 
-    res.json({ message: "Invoice created", invoiceId: result.insertId });
+    res.json({ message: "Invoice created", invoiceId });
   });
 });
 
@@ -976,9 +1336,10 @@ app.put("/api/invoices/:id", (req, res) => {
   proceedUpdateInvoice();
 
   function proceedUpdateInvoice() {
-    db.query("SELECT project_id FROM invoices WHERE id = ?", [invoiceId], (err, results) => {
+    db.query("SELECT * FROM invoices WHERE id = ?", [invoiceId], (err, results) => {
       if (err || results.length === 0) return res.status(500).json({ message: "Invoice not found" });
-      const projectId = results[0].project_id;
+      const invoice = results[0];
+      const projectId = invoice.project_id;
 
       const sql = "UPDATE invoices SET status = ? WHERE id = ?";
       db.query(sql, [status, invoiceId], (err, result) => {
@@ -986,12 +1347,19 @@ app.put("/api/invoices/:id", (req, res) => {
 
         // Emit live update for project invoices
         io.to("project_" + projectId).emit("project_details_updated");
-        db.query("SELECT user_id, client_id FROM projects WHERE id = ?", [projectId], (err, projData) => {
+        db.query("SELECT user_id, client_id, title FROM projects WHERE id = ?", [projectId], (err, projData) => {
           if (!err && projData.length > 0) {
-            io.to("user_" + projData[0].user_id).emit("project_list_updated");
-            io.to("user_" + projData[0].user_id).emit("stats_updated");
-            io.to("client_" + projData[0].client_id).emit("project_list_updated");
-            io.to("client_" + projData[0].client_id).emit("stats_updated");
+            const { user_id, client_id, title } = projData[0];
+            io.to("user_" + user_id).emit("project_list_updated");
+            io.to("user_" + user_id).emit("stats_updated");
+            io.to("client_" + client_id).emit("project_list_updated");
+            io.to("client_" + client_id).emit("stats_updated");
+
+            if (status === 'Paid') {
+              logProjectActivity(projectId, 'invoice_paid', `Invoice "${invoice.title}" ($${invoice.amount}) paid`, 'client', client_id);
+              sendSmartEmail(user_id, 'user', 'invoices', `Invoice Paid - ${invoice.title}`, 
+                `Hello,\n\nYour client has successfully paid the invoice "${invoice.title}" ($${invoice.amount}) for project "${title}".\n\nThank you!`);
+            }
           }
         });
         io.to("admins").emit("refresh_admin_dashboard");
@@ -1359,6 +1727,33 @@ app.post("/api/projects/:id/messages", (req, res) => {
       // Emit real-time message to project room
       io.to("project_" + projectId).emit("new_message", messageData);
 
+      // Check offline status and send email notification
+      db.query("SELECT user_id, client_id, title FROM projects WHERE id = ?", [projectId], (err, projRes) => {
+        if (!err && projRes.length > 0) {
+          const { user_id: freelancerId, client_id: clientId, title: projectTitle } = projRes[0];
+          
+          if (sender_type === 'client') {
+            const freelancerRoom = "user_" + freelancerId;
+            const activeSockets = io.sockets.adapter.rooms.get(freelancerRoom);
+            const isOffline = !activeSockets || activeSockets.size === 0;
+
+            if (isOffline) {
+              sendSmartEmail(freelancerId, 'user', 'messages', `New Offline Message from Client`, 
+                `Hello,\n\nYou have received a new message from your client in project "${projectTitle}" while offline.\n\nMessage: "${message}"\n\nPlease log in to GridLancer to reply.`);
+            }
+          } else {
+            const clientRoom = "client_" + clientId;
+            const activeSockets = io.sockets.adapter.rooms.get(clientRoom);
+            const isOffline = !activeSockets || activeSockets.size === 0;
+
+            if (isOffline) {
+              sendSmartEmail(clientId, 'client', 'messages', `New Offline Message from Freelancer`, 
+                `Hello,\n\nYou have received a new message from your freelancer in project "${projectTitle}" while offline.\n\nMessage: "${message}"\n\nPlease log in to GridLancer to reply.`);
+            }
+          }
+        }
+      });
+
       // If sender is client, notify freelancer of new notification
       if (sender_type === 'client') {
         db.query("SELECT user_id FROM projects WHERE id = ?", [projectId], (err, projRes) => {
@@ -1538,13 +1933,33 @@ app.post("/api/projects/:id/files", upload.single("file"), (req, res) => {
   }
 
   function proceedFileUpload() {
-
     const sql = "INSERT INTO project_files (project_id, filename, original_name, mime_type, size) VALUES (?, ?, ?, ?, ?)";
     db.query(sql, [projectId, file.filename, file.originalname, file.mimetype, file.size], (err, result) => {
       if (err) return res.status(500).json({ message: "Database error" });
 
-      // Auto-send message about file upload ONLY if user plan allows realtime chat
       const fileUserId = req.body.user_id;
+      const fileClientId = req.body.client_id;
+      const senderType = fileUserId ? 'freelancer' : 'client';
+      const senderId = fileUserId || fileClientId || 0;
+
+      // Log project activity
+      logProjectActivity(projectId, 'file_uploaded', `File uploaded: "${file.originalname}"`, senderType, senderId);
+
+      // Fetch project details to send email
+      db.query("SELECT user_id, client_id, title FROM projects WHERE id = ?", [projectId], (e, projRows) => {
+        if (!e && projRows.length > 0) {
+          const { user_id, client_id, title } = projRows[0];
+          if (senderType === 'freelancer') {
+            sendSmartEmail(client_id, 'client', 'files', `New File Uploaded - ${file.originalname}`, 
+              `Hello,\n\nYour freelancer has uploaded a new file "${file.originalname}" for project "${title}".\n\nPlease login to GridLancer to download.`);
+          } else {
+            sendSmartEmail(user_id, 'user', 'files', `New File Uploaded - ${file.originalname}`, 
+              `Hello,\n\nYour client has uploaded a new file "${file.originalname}" for project "${title}".\n\nPlease login to GridLancer to view.`);
+          }
+        }
+      });
+
+      // Auto-send message about file upload ONLY if user plan allows realtime chat
       if (fileUserId) {
         getAgencyOwnerId(fileUserId).then(ownerId => {
           db.query("SELECT plan FROM users WHERE id = ?", [ownerId], (err, planRows) => {
@@ -1723,14 +2138,19 @@ app.post("/api/projects/:id/tasks", (req, res) => {
 
 app.put("/api/tasks/:id", (req, res) => {
   const taskId = req.params.id;
-  const { is_completed } = req.body;
-  db.query("SELECT project_id FROM project_tasks WHERE id = ?", [taskId], (err, results) => {
+  const { is_completed, user_id } = req.body; // user_id optional
+  db.query("SELECT project_id, title FROM project_tasks WHERE id = ?", [taskId], (err, results) => {
     if (err || results.length === 0) return res.status(500).json({ message: "Task not found" });
-    const projectId = results[0].project_id;
+    const { project_id: projectId, title: taskTitle } = results[0];
+
     db.query("UPDATE project_tasks SET is_completed = ? WHERE id = ?", [is_completed, taskId], async (err) => {
       if (err) return res.status(500).json({ message: "Error updating task" });
       try {
         const resultData = await updateProjectProgress(projectId);
+
+        // Log Project Activity
+        const activityMsg = is_completed === 1 ? `Task "${taskTitle}" marked completed` : `Task "${taskTitle}" marked incomplete`;
+        logProjectActivity(projectId, 'task_completed', activityMsg, 'freelancer', user_id || 0);
 
         io.to("project_" + projectId).emit("project_details_updated");
         db.query("SELECT user_id, client_id FROM projects WHERE id = ?", [projectId], (err, projData) => {
@@ -1853,11 +2273,11 @@ app.get("/api/admin/dashboard", (req, res) => {
 
   Promise.all([
     query("SELECT p.*, u.name as freelancer_name, c.name as client_name FROM projects p LEFT JOIN users u ON p.user_id = u.id LEFT JOIN clients c ON p.client_id = c.id ORDER BY p.id DESC"),
-    query("SELECT id, name, email, plan, status, banned_until, unban_requested FROM users ORDER BY id DESC"),
+    query("SELECT id, name, email, plan, status, banned_until, unban_requested, warnings_count, trust_score FROM users ORDER BY id DESC"),
     query("SELECT c.*, u.name as freelancer_name FROM clients c LEFT JOIN users u ON c.user_id = u.id ORDER BY c.id DESC"),
     query("SELECT * FROM activity_log ORDER BY id DESC LIMIT 100"),
     query("SELECT ur.*, u.name as freelancer_name, u.email as freelancer_email FROM upgrade_requests ur JOIN users u ON ur.user_id = u.id ORDER BY ur.id DESC"),
-    query("SELECT comp.*, c.name as client_name, c.email as client_email, u.name as freelancer_name, u.email as freelancer_email, p.title as project_title FROM complaints comp JOIN clients c ON comp.client_id = c.id JOIN users u ON comp.freelancer_id = u.id JOIN projects p ON comp.project_id = p.id ORDER BY comp.id DESC")
+    query("SELECT comp.*, c.name as client_name, c.email as client_email, u.name as freelancer_name, u.email as freelancer_email, p.title as project_title, u.trust_score as freelancer_trust_score, u.warnings_count as freelancer_warnings_count FROM complaints comp JOIN clients c ON comp.client_id = c.id JOIN users u ON comp.freelancer_id = u.id JOIN projects p ON comp.project_id = p.id ORDER BY comp.id DESC")
   ]).then(([projects, freelancers, clients, activities, upgradeRequests, complaints]) => {
     res.json({
       projects,
@@ -2284,7 +2704,6 @@ app.post("/api/admin/complaints/:id/resolve", (req, res) => {
       [`Admin marked complaint ID ${complaintId} as resolved`], () => {
         io.to("admins").emit("refresh_admin_dashboard");
       });
-
     res.json({ message: "Complaint marked as resolved successfully" });
   });
 });
@@ -2295,13 +2714,796 @@ app.get("/api/projects/:projectId/complaints", (req, res) => {
   db.query("SELECT * FROM complaints WHERE project_id = ? ORDER BY id DESC", [projectId], (err, results) => {
     if (err) {
       console.log("Error fetching complaints for project:", err);
-      return res.status(500).json({ message: "Error fetching complaints" });
+      return;
     }
     res.json(results);
   });
 });
 
+// ==========================================
+// RECURRING INVOICES CRON SIMULATION
+// ==========================================
+const checkRecurringInvoices = () => {
+  const today = new Date().toISOString().split('T')[0];
+  db.query("SELECT * FROM recurring_invoices WHERE status = 'Active' AND next_date <= ?", [today], (err, recInvs) => {
+    if (err) {
+      console.log("Error checking recurring invoices:", err);
+      return;
+    }
+    recInvs.forEach(ri => {
+      // Create invoice with 14-day due date
+      const invoiceSql = "INSERT INTO invoices (project_id, title, amount, status, due_date) VALUES (?, ?, ?, 'Pending', DATE_ADD(?, INTERVAL 14 DAY))";
+      db.query(invoiceSql, [ri.project_id, ri.title, ri.amount, ri.next_date], (invErr, result) => {
+        if (invErr) {
+          console.log("Error generating invoice from recurring billing:", invErr);
+          return;
+        }
+        const invoiceId = result.insertId;
 
+        // Log project activity & email client
+        db.query("SELECT user_id, client_id, title FROM projects WHERE id = ?", [ri.project_id], (projErr, projRows) => {
+          if (!projErr && projRows.length > 0) {
+            const { user_id, client_id, title } = projRows[0];
+            logProjectActivity(ri.project_id, 'invoice_generated', `Auto-generated recurring invoice: "${ri.title}" for $${ri.amount}`, 'system', 0);
+            sendSmartEmail(client_id, 'client', 'invoices', `New Recurring Invoice - ${ri.title}`, 
+              `Hello,\n\nA new recurring invoice has been auto-generated for project "${title}".\n\nTitle: ${ri.title}\nAmount: $${ri.amount}\nDue Date: ${new Date(new Date(ri.next_date).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}\n\nPlease login to pay.`);
+          }
+        });
+
+        // Update next date based on frequency
+        let nextDate = new Date(ri.next_date);
+        if (ri.frequency === 'Weekly') {
+          nextDate.setDate(nextDate.getDate() + 7);
+        } else if (ri.frequency === 'Monthly') {
+          nextDate.setMonth(nextDate.getMonth() + 1);
+        } else if (ri.frequency === 'Quarterly') {
+          nextDate.setMonth(nextDate.getMonth() + 3);
+        }
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+        db.query("UPDATE recurring_invoices SET next_date = ? WHERE id = ?", [nextDateStr, ri.id]);
+      });
+    });
+  });
+};
+
+// Check every hour
+setInterval(checkRecurringInvoices, 3600000);
+setTimeout(checkRecurringInvoices, 5000);
+
+// ==========================================
+// CALENDAR VIEW ENDPOINTS
+// ==========================================
+app.get("/api/calendar/user/:userId", (req, res) => {
+  const { userId } = req.params;
+  
+  const pDeadlines = `SELECT id, title as name, deadline as start, 'project' as type, id as project_id FROM projects WHERE user_id = ? OR id IN (SELECT project_id FROM project_assignments WHERE user_id = ?)`;
+  const mSchedules = `SELECT m.id, m.title as name, m.scheduled_at as start, 'meeting' as type, m.project_id, p.title as projectTitle FROM meetings m JOIN projects p ON m.project_id = p.id WHERE p.user_id = ? OR p.id IN (SELECT project_id FROM project_assignments WHERE user_id = ?)`;
+  const iDueDates = `SELECT i.id, i.title as name, i.due_date as start, 'invoice' as type, i.project_id, p.title as projectTitle FROM invoices i JOIN projects p ON i.project_id = p.id WHERE p.user_id = ? OR p.id IN (SELECT project_id FROM project_assignments WHERE user_id = ?)`;
+  const mDeadlines = `SELECT ms.id, ms.title as name, ms.deadline as start, 'milestone' as type, ms.project_id, p.title as projectTitle FROM milestones ms JOIN projects p ON ms.project_id = p.id WHERE p.user_id = ? OR p.id IN (SELECT project_id FROM project_assignments WHERE user_id = ?)`;
+
+  Promise.all([
+    new Promise(resolve => db.query(pDeadlines, [userId, userId], (e, r) => resolve(r || []))),
+    new Promise(resolve => db.query(mSchedules, [userId, userId], (e, r) => resolve(r || []))),
+    new Promise(resolve => db.query(iDueDates, [userId, userId], (e, r) => resolve(r || []))),
+    new Promise(resolve => db.query(mDeadlines, [userId, userId], (e, r) => resolve(r || [])))
+  ]).then(([projects, meetings, invoices, milestones]) => {
+    const clean = (arr) => arr.filter(x => x.start);
+    res.json([
+      ...clean(projects),
+      ...clean(meetings),
+      ...clean(invoices),
+      ...clean(milestones)
+    ]);
+  }).catch(err => res.status(500).json({ message: err.message }));
+});
+
+app.get("/api/calendar/client/:clientId", (req, res) => {
+  const { clientId } = req.params;
+
+  const pDeadlines = `SELECT id, title as name, deadline as start, 'project' as type, id as project_id FROM projects WHERE client_id = ?`;
+  const mSchedules = `SELECT m.id, m.title as name, m.scheduled_at as start, 'meeting' as type, m.project_id, p.title as projectTitle FROM meetings m JOIN projects p ON m.project_id = p.id WHERE p.client_id = ?`;
+  const iDueDates = `SELECT i.id, i.title as name, i.due_date as start, 'invoice' as type, i.project_id, p.title as projectTitle FROM invoices i JOIN projects p ON i.project_id = p.id WHERE p.client_id = ?`;
+  const mDeadlines = `SELECT ms.id, ms.title as name, ms.deadline as start, 'milestone' as type, ms.project_id, p.title as projectTitle FROM milestones ms JOIN projects p ON ms.project_id = p.id WHERE p.client_id = ?`;
+
+  Promise.all([
+    new Promise(resolve => db.query(pDeadlines, [clientId], (e, r) => resolve(r || []))),
+    new Promise(resolve => db.query(mSchedules, [clientId], (e, r) => resolve(r || []))),
+    new Promise(resolve => db.query(iDueDates, [clientId], (e, r) => resolve(r || []))),
+    new Promise(resolve => db.query(mDeadlines, [clientId], (e, r) => resolve(r || [])))
+  ]).then(([projects, meetings, invoices, milestones]) => {
+    const clean = (arr) => arr.filter(x => x.start);
+    res.json([
+      ...clean(projects),
+      ...clean(meetings),
+      ...clean(invoices),
+      ...clean(milestones)
+    ]);
+  }).catch(err => res.status(500).json({ message: err.message }));
+});
+
+// ==========================================
+// MEETINGS API
+// ==========================================
+app.get("/api/meetings/project/:projectId", (req, res) => {
+  const { projectId } = req.params;
+  db.query("SELECT * FROM meetings WHERE project_id = ? ORDER BY scheduled_at ASC", [projectId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching meetings" });
+    res.json(results);
+  });
+});
+
+app.post("/api/meetings", (req, res) => {
+  const { project_id, title, description, scheduled_at, duration, user_id, user_type } = req.body;
+  if (!project_id || !title || !scheduled_at) {
+    return res.status(400).json({ message: "Project ID, Title and Schedule time are required" });
+  }
+
+  const salt = "gridlancer-secure-jitsi-meeting-room-salt-2026";
+  const uniqueHash = require('crypto').createHash('sha256').update(`${salt}-${project_id}-${scheduled_at}-${Date.now()}`).digest('hex');
+  const roomName = `gridlancer-project-${uniqueHash.substring(0, 24)}`;
+
+  const sql = "INSERT INTO meetings (project_id, title, description, scheduled_at, duration, room_name) VALUES (?, ?, ?, ?, ?, ?)";
+  db.query(sql, [project_id, title, description || null, scheduled_at, duration || 30, roomName], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ message: "Error scheduling meeting" });
+    }
+
+    const meetingId = result.insertId;
+    const senderRole = user_type || 'freelancer';
+    const senderId = user_id || 0;
+    logProjectActivity(project_id, 'meeting_scheduled', `Meeting scheduled: "${title}" on ${new Date(scheduled_at).toLocaleString()}`, senderRole, senderId);
+
+    db.query("SELECT user_id, client_id, title as projectTitle FROM projects WHERE id = ?", [project_id], (err2, projRows) => {
+      if (!err2 && projRows.length > 0) {
+        const { user_id: freelancerId, client_id: clientId, projectTitle } = projRows[0];
+        
+        const emailContent = `Hello,\n\nA new video meeting has been scheduled for project "${projectTitle}".\n\nTitle: ${title}\nDescription: ${description || 'N/A'}\nScheduled Time: ${new Date(scheduled_at).toLocaleString()}\nDuration: ${duration || 30} mins\n\nPlease login to GridLancer to join at the scheduled time.`;
+        
+        sendSmartEmail(freelancerId, 'user', 'meetings', `New Meeting Scheduled: ${title}`, emailContent);
+        sendSmartEmail(clientId, 'client', 'meetings', `New Meeting Scheduled: ${title}`, emailContent);
+
+        io.to("project_" + project_id).emit("project_details_updated");
+        io.to("user_" + freelancerId).emit("notifications_updated");
+        io.to("client_" + clientId).emit("project_list_updated");
+      }
+    });
+
+    res.json({ message: "Meeting scheduled successfully", meetingId });
+  });
+});
+
+app.delete("/api/meetings/:id", (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT project_id, title FROM meetings WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(500).json({ message: "Meeting not found" });
+    const { project_id, title } = results[0];
+
+    db.query("DELETE FROM meetings WHERE id = ?", [id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error deleting meeting" });
+      logProjectActivity(project_id, 'meeting_cancelled', `Meeting "${title}" was cancelled`, 'system', 0);
+      res.json({ message: "Meeting cancelled successfully" });
+    });
+  });
+});
+
+// ==========================================
+// TIME ENTRIES API
+// ==========================================
+app.get("/api/time-entries/project/:projectId", (req, res) => {
+  const { projectId } = req.params;
+  db.query("SELECT te.*, u.name as userName FROM time_entries te JOIN users u ON te.user_id = u.id WHERE te.project_id = ? ORDER BY te.start_time DESC", [projectId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching time logs" });
+    res.json(results);
+  });
+});
+
+app.post("/api/time-entries", (req, res) => {
+  const { project_id, user_id, description, start_time, end_time, duration, is_manual } = req.body;
+  if (!project_id || !user_id || !start_time) {
+    return res.status(400).json({ message: "Project ID, User ID and Start time are required" });
+  }
+
+  const sql = "INSERT INTO time_entries (project_id, user_id, description, start_time, end_time, duration, is_manual) VALUES (?, ?, ?, ?, ?, ?, ?)";
+  db.query(sql, [project_id, user_id, description || null, start_time, end_time || null, duration || 0, is_manual ? 1 : 0], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ message: "Error logging time entry" });
+    }
+
+    const logId = result.insertId;
+    if (is_manual) {
+      const hours = (duration / 3600).toFixed(2);
+      logProjectActivity(project_id, 'time_logged', `Manually logged ${hours} hours worked: "${description || 'No description'}"`, 'freelancer', user_id);
+    }
+    io.to("project_" + project_id).emit("project_details_updated");
+    io.to("user_" + user_id).emit("stats_updated");
+    
+    res.json({ message: "Time log entry saved", logId });
+  });
+});
+
+app.put("/api/time-entries/:id/stop", (req, res) => {
+  const { id } = req.params;
+  const { end_time, duration, description } = req.body;
+  if (!end_time || !duration) {
+    return res.status(400).json({ message: "End time and Duration are required to stop timer" });
+  }
+
+  db.query("SELECT project_id, user_id FROM time_entries WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Timer session not found" });
+    const { project_id, user_id } = results[0];
+
+    const sql = "UPDATE time_entries SET end_time = ?, duration = ?, description = ? WHERE id = ?";
+    db.query(sql, [end_time, duration, description || null, id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error updating time entry" });
+
+      const hours = (duration / 3600).toFixed(2);
+      logProjectActivity(project_id, 'time_logged', `Tracked ${hours} hours: "${description || 'No description'}"`, 'freelancer', user_id);
+      io.to("project_" + project_id).emit("project_details_updated");
+      io.to("user_" + user_id).emit("stats_updated");
+      
+      res.json({ message: "Timer stopped and time logged successfully" });
+    });
+  });
+});
+
+app.delete("/api/time-entries/:id", (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT project_id, duration, user_id FROM time_entries WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Log not found" });
+    const { project_id, duration, user_id } = results[0];
+
+    db.query("DELETE FROM time_entries WHERE id = ?", [id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error deleting time entry" });
+      const hours = (duration / 3600).toFixed(2);
+      logProjectActivity(project_id, 'time_deleted', `Deleted time log of ${hours} hours`, 'freelancer', user_id);
+      io.to("project_" + project_id).emit("project_details_updated");
+      io.to("user_" + user_id).emit("stats_updated");
+      res.json({ message: "Time log entry deleted successfully" });
+    });
+  });
+});
+
+// ==========================================
+// RECURRING INVOICES ENDPOINTS
+// ==========================================
+app.get("/api/recurring-invoices/project/:projectId", (req, res) => {
+  const { projectId } = req.params;
+  db.query("SELECT * FROM recurring_invoices WHERE project_id = ? ORDER BY created_at DESC", [projectId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching recurring billings" });
+    res.json(results);
+  });
+});
+
+app.post("/api/recurring-invoices", (req, res) => {
+  const { project_id, title, amount, frequency, next_date, user_id } = req.body;
+  if (!project_id || !title || !amount || !frequency || !next_date || !user_id) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  db.query("SELECT plan FROM users WHERE id = ?", [user_id], (err, userRows) => {
+    if (err || userRows.length === 0) return res.status(404).json({ message: "User not found" });
+    const plan = userRows[0].plan || 'Starter';
+    const limits = getPlanLimits(plan);
+
+    if (!limits.invoiceTracking) {
+      return res.status(403).json({
+        message: "Recurring billing is available on Pro and Agency plans. Upgrade to enable auto-invoicing.",
+        upgrade: true,
+        requiredPlan: 'Pro'
+      });
+    }
+
+    const sql = "INSERT INTO recurring_invoices (project_id, title, amount, frequency, next_date, status) VALUES (?, ?, ?, ?, ?, 'Active')";
+    db.query(sql, [project_id, title, amount, frequency, next_date], (err2, result) => {
+      if (err2) return res.status(500).json({ message: "Error creating recurring invoice" });
+      logProjectActivity(project_id, 'recurring_created', `Scheduled recurring invoice: "${title}" ($${amount}) ${frequency}`, 'freelancer', user_id);
+      res.json({ message: "Recurring invoice billing created successfully", recurringId: result.insertId });
+    });
+  });
+});
+
+app.put("/api/recurring-invoices/:id", (req, res) => {
+  const { id } = req.params;
+  const { status, user_id } = req.body;
+
+  db.query("SELECT project_id, title FROM recurring_invoices WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Recurring billing not found" });
+    const { project_id, title } = results[0];
+
+    db.query("UPDATE recurring_invoices SET status = ? WHERE id = ?", [status, id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error updating recurring billing" });
+      logProjectActivity(project_id, 'recurring_updated', `Set recurring billing "${title}" status to ${status}`, 'freelancer', user_id || 0);
+      res.json({ message: `Recurring billing set to ${status}` });
+    });
+  });
+});
+
+app.delete("/api/recurring-invoices/:id", (req, res) => {
+  const { id } = req.params;
+  const { user_id } = req.query;
+
+  db.query("SELECT project_id, title FROM recurring_invoices WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Recurring billing not found" });
+    const { project_id, title } = results[0];
+
+    db.query("DELETE FROM recurring_invoices WHERE id = ?", [id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error deleting recurring billing" });
+      logProjectActivity(project_id, 'recurring_deleted', `Deleted recurring billing "${title}"`, 'freelancer', user_id || 0);
+      res.json({ message: "Recurring billing deleted" });
+    });
+  });
+});
+
+// ==========================================
+// PROJECT TEMPLATES API
+// ==========================================
+app.get("/api/templates", (req, res) => {
+  const { userId } = req.query;
+  const sql = "SELECT * FROM project_templates WHERE user_id IS NULL " + (userId ? "OR user_id = ?" : "") + " ORDER BY id DESC";
+  const params = userId ? [userId] : [];
+
+  db.query(sql, params, (err, templates) => {
+    if (err) return res.status(500).json({ message: "Error fetching templates" });
+    
+    if (templates.length === 0 && !userId) {
+      const defaultTemplates = [
+        { title: "Website Development", desc: "Full website build with frontend and backend.", tasks: ["UI/UX Mockups", "Frontend Implementation", "API Development", "QA Testing", "Domain & Deployment"], milestones: ["Project Kickoff", "Beta Release", "Final Launch"] },
+        { title: "Mobile App Development", desc: "iOS/Android application with core workflows.", tasks: ["Wireframing & Prototypes", "App Frontend Setup", "Push Notifications Integration", "App Store Submission Preparation"], milestones: ["App Design approved", "TestFlight Beta Build", "App Store Approval"] },
+        { title: "SEO Campaign", desc: "Comprehensive search engine optimization campaign.", tasks: ["Keyword Research", "On-Page Audit", "Content Writing", "Backlink Outreach", "Monthly Reporting"], milestones: ["Audit Delivery", "Content Refresh completed", "Ranking Progress Review"] },
+        { title: "Graphic Design Brand Kit", desc: "Complete visual identity design.", tasks: ["Mood Board Development", "Logo Concepts", "Typography & Color Guide", "Business Cards Layout"], milestones: ["Mood Board Selected", "Logo Finalized", "Brand Book Delivered"] }
+      ];
+
+      const seedNext = (idx) => {
+        if (idx >= defaultTemplates.length) {
+          db.query(sql, params, (err2, finalTemps) => res.json(finalTemps));
+          return;
+        }
+        const t = defaultTemplates[idx];
+        db.query("INSERT INTO project_templates (title, description) VALUES (?, ?)", [t.title, t.desc], (e, r) => {
+          if (!e) {
+            const templateId = r.insertId;
+            const taskVals = t.tasks.map((title, weightIdx) => [templateId, title, 20]);
+            db.query("INSERT INTO template_tasks (template_id, title, weight) VALUES ?", [taskVals], () => {
+              const msVals = t.milestones.map((title, dayIdx) => [templateId, title, null, (dayIdx + 1) * 7]);
+              db.query("INSERT INTO template_milestones (template_id, title, amount, suggested_days) VALUES ?", [msVals], () => {
+                seedNext(idx + 1);
+              });
+            });
+          } else {
+            seedNext(idx + 1);
+          }
+        });
+      };
+      seedNext(0);
+    } else {
+      res.json(templates);
+    }
+  });
+});
+
+app.get("/api/templates/:id", (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT * FROM project_templates WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Template not found" });
+    const template = results[0];
+
+    db.query("SELECT * FROM template_tasks WHERE template_id = ?", [id], (err2, tasks) => {
+      db.query("SELECT * FROM template_milestones WHERE template_id = ?", [id], (err3, milestones) => {
+        res.json({
+          ...template,
+          tasks: tasks || [],
+          milestones: milestones || []
+        });
+      });
+    });
+  });
+});
+
+app.post("/api/templates", (req, res) => {
+  const { user_id, title, description, tasks, milestones } = req.body;
+  if (!title) return res.status(400).json({ message: "Template title is required" });
+
+  db.query("INSERT INTO project_templates (user_id, title, description) VALUES (?, ?, ?)", [user_id || null, title, description], (err, result) => {
+    if (err) return res.status(500).json({ message: "Error creating template" });
+    const templateId = result.insertId;
+
+    const saveTasks = () => {
+      if (Array.isArray(tasks) && tasks.length > 0) {
+        const taskValues = tasks.map(t => [templateId, t.title, t.weight || 0]);
+        db.query("INSERT INTO template_tasks (template_id, title, weight) VALUES ?", [taskValues], saveMilestones);
+      } else {
+        saveMilestones();
+      }
+    };
+
+    const saveMilestones = () => {
+      if (Array.isArray(milestones) && milestones.length > 0) {
+        const msValues = milestones.map(m => [templateId, m.title, m.amount || null, m.suggested_days || 7]);
+        db.query("INSERT INTO template_milestones (template_id, title, amount, suggested_days) VALUES ?", [msValues], finish);
+      } else {
+        finish();
+      }
+    };
+
+    const finish = () => {
+      res.json({ message: "Template created successfully", templateId });
+    };
+
+    saveTasks();
+  });
+});
+
+// ==========================================
+// MILESTONES API (Approval workflow)
+// ==========================================
+app.get("/api/milestones/project/:projectId", (req, res) => {
+  const { projectId } = req.params;
+  db.query("SELECT * FROM milestones WHERE project_id = ? ORDER BY deadline ASC, id ASC", [projectId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching milestones" });
+    res.json(results);
+  });
+});
+
+app.post("/api/milestones", (req, res) => {
+  const { project_id, title, description, amount, deadline, user_id } = req.body;
+  if (!project_id || !title) return res.status(400).json({ message: "Project ID and Title are required" });
+
+  const sql = "INSERT INTO milestones (project_id, title, description, amount, deadline, status) VALUES (?, ?, ?, ?, ?, 'Pending')";
+  db.query(sql, [project_id, title, description || null, amount || null, deadline || null], (err, result) => {
+    if (err) return res.status(500).json({ message: "Error creating milestone" });
+    const milestoneId = result.insertId;
+    logProjectActivity(project_id, 'milestone_created', `Milestone created: "${title}"` + (amount ? ` ($${amount})` : ""), 'freelancer', user_id || 0);
+    res.json({ message: "Milestone created", milestoneId });
+  });
+});
+
+app.put("/api/milestones/:id/status", (req, res) => {
+  const { id } = req.params;
+  const { status, note, user_id, user_type } = req.body;
+
+  db.query("SELECT * FROM milestones WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Milestone not found" });
+    const ms = results[0];
+
+    db.query("UPDATE milestones SET status = ? WHERE id = ?", [status, id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error updating milestone status" });
+
+      db.query("SELECT user_id, client_id, title as projectTitle FROM projects WHERE id = ?", [ms.project_id], (err3, projRows) => {
+        if (!err3 && projRows.length > 0) {
+          const { user_id: freelancerId, client_id: clientId, projectTitle } = projRows[0];
+
+          if (status === 'Pending Review') {
+            logProjectActivity(ms.project_id, 'milestone_submitted', `Submitted milestone "${ms.title}" for review`, 'freelancer', user_id || 0);
+            sendSmartEmail(clientId, 'client', 'milestones', `Milestone Review Required: ${ms.title}`, 
+              `Hello,\n\nYour freelancer has submitted milestone "${ms.title}" for approval.\n\nProject: ${projectTitle}\nDescription: ${ms.description || 'N/A'}\n\nPlease login to review and approve or request revision.`);
+          } else if (status === 'Approved') {
+            logProjectActivity(ms.project_id, 'milestone_approved', `Approved milestone "${ms.title}"`, 'client', user_id || 0);
+            sendSmartEmail(freelancerId, 'user', 'milestones', `Milestone Approved: ${ms.title}`, 
+              `Hello,\n\nYour client has approved milestone "${ms.title}".\n\nProject: ${projectTitle}\n\nDeliverables are marked complete.`);
+
+            if (ms.amount > 0) {
+              const invoiceSql = "INSERT INTO invoices (project_id, title, amount, status, due_date) VALUES (?, ?, ?, 'Pending', DATE_ADD(CURRENT_DATE(), INTERVAL 14 DAY))";
+              db.query(invoiceSql, [ms.project_id, `Milestone Payment: ${ms.title}`, ms.amount], (invErr, invRes) => {
+                if (!invErr) {
+                  const invoiceId = invRes.insertId;
+                  db.query("UPDATE milestones SET invoice_id = ? WHERE id = ?", [invoiceId, id]);
+                  logProjectActivity(ms.project_id, 'invoice_generated', `Invoice generated for approved milestone: $${ms.amount}`, 'system', 0);
+                  sendSmartEmail(clientId, 'client', 'invoices', `Invoice Generated for Milestone - ${ms.title}`, 
+                    `Hello,\n\nAn invoice has been unlocked for the approved milestone "${ms.title}".\n\nAmount: $${ms.amount}\n\nPlease login to pay.`);
+                }
+              });
+            }
+          } else if (status === 'Revision Requested') {
+            logProjectActivity(ms.project_id, 'milestone_revision', `Requested revision for milestone "${ms.title}": "${note || 'No notes'}"`, 'client', user_id || 0);
+            sendSmartEmail(freelancerId, 'user', 'milestones', `Revision Requested: ${ms.title}`, 
+              `Hello,\n\nYour client has requested changes for milestone "${ms.title}".\n\nProject: ${projectTitle}\nFeedback: ${note || 'No description provided'}\n\nPlease update and resubmit.`);
+          }
+        }
+      });
+
+      res.json({ message: `Milestone status set to ${status}` });
+    });
+  });
+});
+
+// ==========================================
+// CONTRACTS API
+// ==========================================
+app.get("/api/contracts/project/:projectId", (req, res) => {
+  const { projectId } = req.params;
+  db.query("SELECT * FROM contracts WHERE project_id = ? ORDER BY id DESC", [projectId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching contracts" });
+    res.json(results);
+  });
+});
+
+app.post("/api/contracts", (req, res) => {
+  const { project_id, title, terms, scope, payment_terms, user_id } = req.body;
+  if (!project_id || !title || !terms || !scope || !payment_terms) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const sql = "INSERT INTO contracts (project_id, title, terms, scope, payment_terms, status) VALUES (?, ?, ?, ?, ?, 'Pending')";
+  db.query(sql, [project_id, title, terms, scope, payment_terms], (err, result) => {
+    if (err) return res.status(500).json({ message: "Error creating contract" });
+    const contractId = result.insertId;
+
+    logProjectActivity(project_id, 'contract_sent', `Sent digital contract: "${title}"`, 'freelancer', user_id || 0);
+
+    db.query("SELECT client_id, title as projectTitle FROM projects WHERE id = ?", [project_id], (e, projRows) => {
+      if (!e && projRows.length > 0) {
+        sendSmartEmail(projRows[0].client_id, 'client', 'contracts', `New Digital Contract for Review: ${title}`, 
+          `Hello,\n\nA new digital contract "${title}" has been drafted for your project "${projRows[0].projectTitle}".\n\nPlease login to review and sign the contract.`);
+      }
+    });
+
+    res.json({ message: "Contract drafted and sent to client", contractId });
+  });
+});
+
+app.put("/api/contracts/:id/status", (req, res) => {
+  const { id } = req.params;
+  const { status, digital_signature, client_id } = req.body;
+
+  db.query("SELECT * FROM contracts WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Contract not found" });
+    const contract = results[0];
+
+    const signedAt = status === 'Accepted' ? new Date() : null;
+    const sig = status === 'Accepted' ? digital_signature : null;
+
+    db.query("UPDATE contracts SET status = ?, digital_signature = ?, signed_at = ? WHERE id = ?", [status, sig, signedAt, id], (err2) => {
+      if (err2) return res.status(500).json({ message: "Error updating contract" });
+
+      db.query("SELECT user_id, title as projectTitle FROM projects WHERE id = ?", [contract.project_id], (err3, projRows) => {
+        if (!err3 && projRows.length > 0) {
+          const { user_id: freelancerId, projectTitle } = projRows[0];
+
+          if (status === 'Accepted') {
+            logProjectActivity(contract.project_id, 'contract_signed', `Signed contract: "${contract.title}" by digital signature: "${sig}"`, 'client', client_id || 0);
+            sendSmartEmail(freelancerId, 'user', 'contracts', `Contract Signed: ${contract.title}`, 
+              `Hello,\n\nYour client has signed the digital contract "${contract.title}".\n\nProject: ${projectTitle}\nSigned By: ${sig}\n\nWork is officially locked and loaded!`);
+          } else {
+            logProjectActivity(contract.project_id, 'contract_rejected', `Rejected contract: "${contract.title}"`, 'client', client_id || 0);
+            sendSmartEmail(freelancerId, 'user', 'contracts', `Contract Rejected: ${contract.title}`, 
+              `Hello,\n\nYour client has declined the digital contract "${contract.title}".\n\nProject: ${projectTitle}\n\nPlease review and make updates.`);
+          }
+        }
+      });
+
+      res.json({ message: `Contract status set to ${status}` });
+    });
+  });
+});
+
+// ==========================================
+// EMAIL PREFERENCES API
+// ==========================================
+app.get("/api/email-preferences", (req, res) => {
+  const { userId, clientId } = req.query;
+  const col = clientId ? 'client_id' : 'user_id';
+  const val = clientId || userId;
+
+  db.query(`SELECT category, enabled FROM email_preferences WHERE ${col} = ?`, [val], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching preferences" });
+    const prefs = {};
+    const categories = ['projects', 'invoices', 'meetings', 'milestones', 'contracts', 'files', 'messages'];
+    categories.forEach(cat => prefs[cat] = true);
+    results.forEach(row => {
+      prefs[row.category] = row.enabled === 1;
+    });
+    res.json(prefs);
+  });
+});
+
+app.put("/api/email-preferences", (req, res) => {
+  const { userId, clientId, preferences } = req.body;
+  if (!preferences) return res.status(400).json({ message: "Preferences object required" });
+
+  const col = clientId ? 'client_id' : 'user_id';
+  const val = clientId || userId;
+
+  const saveNext = (cats, idx) => {
+    if (idx >= cats.length) {
+      return res.json({ message: "Preferences updated successfully" });
+    }
+    const cat = cats[idx];
+    const enabled = preferences[cat] ? 1 : 0;
+    const sql = `INSERT INTO email_preferences (${col}, category, enabled) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE enabled = ?`;
+    db.query(sql, [val, cat, enabled, enabled], (err) => {
+      if (err) console.log("Error updating preference:", err);
+      saveNext(cats, idx + 1);
+    });
+  };
+
+  saveNext(Object.keys(preferences), 0);
+});
+
+// ==========================================
+// WHITE LABEL SETTINGS API
+// ==========================================
+app.get("/api/white-label/by-email", (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ message: "Email query param is required" });
+  db.query("SELECT user_id FROM clients WHERE email = ?", [email], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(404).json({ message: "Client not found" });
+    }
+    const userId = results[0].user_id;
+    db.query("SELECT * FROM white_label_settings WHERE user_id = ?", [userId], (err2, results2) => {
+      if (err2 || results2.length === 0) {
+        return res.json({ logo_url: null, primary_color: '#6366f1', subdomain: null });
+      }
+      res.json(results2[0]);
+    });
+  });
+});
+
+app.get("/api/white-label/:userId", (req, res) => {
+  const { userId } = req.params;
+  db.query("SELECT * FROM white_label_settings WHERE user_id = ?", [userId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching white label settings" });
+    if (results.length === 0) {
+      return res.json({ logo_url: null, primary_color: '#6366f1', subdomain: null });
+    }
+    res.json(results[0]);
+  });
+});
+
+app.post("/api/white-label", (req, res) => {
+  const { user_id, logo_url, primary_color, subdomain } = req.body;
+  if (!user_id) return res.status(400).json({ message: "User ID is required" });
+
+  db.query("SELECT plan FROM users WHERE id = ?", [user_id], (err, userRows) => {
+    if (err || userRows.length === 0) return res.status(404).json({ message: "User not found" });
+    if (userRows[0].plan !== 'Agency') {
+      return res.status(403).json({ message: "White label client portal is only available on the Agency plan." });
+    }
+
+    let finalLogoUrl = logo_url;
+    if (logo_url && logo_url.startsWith("data:image/")) {
+      try {
+        const match = logo_url.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (match) {
+          const mimeType = match[1];
+          const base64Data = match[2];
+          const extension = mimeType.split('/')[1] || 'png';
+          const filename = `logo-${user_id}-${Date.now()}.${extension}`;
+          const filepath = path.join(uploadsDir, filename);
+          fs.writeFileSync(filepath, base64Data, { encoding: 'base64' });
+          const baseUrl = req.protocol + "://" + req.get("host");
+          finalLogoUrl = `${baseUrl}/uploads/${filename}`;
+        }
+      } catch (uploadErr) {
+        console.error("Error saving base64 logo:", uploadErr);
+      }
+    }
+
+    const sql = "INSERT INTO white_label_settings (user_id, logo_url, primary_color, subdomain) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE logo_url = ?, primary_color = ?, subdomain = ?";
+    db.query(sql, [user_id, finalLogoUrl, primary_color, subdomain, finalLogoUrl, primary_color, subdomain], (err2) => {
+      if (err2) {
+        console.log(err2);
+        return res.status(500).json({ message: "Error saving settings (Subdomain might already be taken)" });
+      }
+      res.json({ message: "White label branding saved successfully" });
+    });
+  });
+});
+
+// ==========================================
+// PROJECT ACTIVITIES API
+// ==========================================
+app.get("/api/projects/:id/activities", (req, res) => {
+  const projectId = req.params.id;
+  db.query("SELECT * FROM project_activities WHERE project_id = ? ORDER BY created_at DESC LIMIT 100", [projectId], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching activities" });
+    res.json(results);
+  });
+});
+
+// ==========================================
+// MOCK EMAILS API
+// ==========================================
+app.get("/api/mock-emails", (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.json([]);
+  db.query("SELECT * FROM mock_emails WHERE recipient_email = ? ORDER BY sent_at DESC LIMIT 50", [email], (err, results) => {
+    if (err) return res.status(500).json({ message: "Error fetching mock emails" });
+    res.json(results);
+  });
+});
+
+// ==========================================
+// DISPUTE RESOLUTION AND TRUST SCORE ADMIN API
+// ==========================================
+app.post("/api/admin/complaints/:id/action", (req, res) => {
+  const complaintId = req.params.id;
+  const { action, reason, duration, admin_response } = req.body;
+
+  db.query("SELECT client_id, freelancer_id, project_id FROM complaints WHERE id = ?", [complaintId], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ message: "Complaint not found" });
+    const { client_id, freelancer_id, project_id } = results[0];
+
+    const executeAction = () => {
+      if (action === 'warn') {
+        db.query("UPDATE users SET warnings_count = warnings_count + 1, trust_score = GREATEST(trust_score - 10, 0) WHERE id = ?", [freelancer_id], (e) => {
+          if (e) return res.status(500).json({ message: "Error warning user" });
+          
+          logProjectActivity(project_id, 'complaint_warned', `Admin warned freelancer due to dispute resolution: "${reason}"`, 'system', 0);
+          db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Warning', ?)", 
+            [freelancer_id, `Freelancer (ID: ${freelancer_id}) warned by admin: ${reason}`]);
+          db.query("UPDATE complaints SET status = 'Resolved', admin_response = ? WHERE id = ?", [`Warned freelancer: ${reason}`, complaintId]);
+          
+          io.to("user_" + freelancer_id).emit("user_warning_added");
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: "Freelancer warned and trust score decreased by 10." });
+        });
+      } else if (action === 'clarify') {
+        db.query("UPDATE complaints SET status = 'Under Review', admin_response = ? WHERE id = ?", [admin_response, complaintId], (e) => {
+          if (e) return res.status(500).json({ message: "Error requesting clarification" });
+          
+          logProjectActivity(project_id, 'complaint_clarification', `Admin requested clarification: "${admin_response}"`, 'system', 0);
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: "Dispute placed under review and clarification requested." });
+        });
+      } else if (action === 'resolve') {
+        db.query("UPDATE complaints SET status = 'Resolved', admin_response = ? WHERE id = ?", [admin_response || 'Resolved by admin', complaintId], (e) => {
+          if (e) return res.status(500).json({ message: "Error resolving complaint" });
+          
+          db.query("UPDATE users SET trust_score = GREATEST(trust_score - 15, 0) WHERE id = ?", [freelancer_id]);
+          logProjectActivity(project_id, 'complaint_resolved', `Admin resolved dispute: "${admin_response || 'Case closed'}"`, 'system', 0);
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: "Dispute resolved and trust score decreased by 15." });
+        });
+      } else if (action === 'reject') {
+        db.query("UPDATE complaints SET status = 'Rejected', admin_response = ? WHERE id = ?", [admin_response || 'Rejected by admin', complaintId], (e) => {
+          if (e) return res.status(500).json({ message: "Error rejecting complaint" });
+          
+          logProjectActivity(project_id, 'complaint_rejected', `Admin rejected client complaint`, 'system', 0);
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: "Client complaint rejected by administration." });
+        });
+      } else if (action === 'restrict') {
+        let bannedUntil = null;
+        const now = new Date();
+        if (duration === '1d') bannedUntil = new Date(now.setDate(now.getDate() + 1));
+        else if (duration === '1w') bannedUntil = new Date(now.setDate(now.getDate() + 7));
+        else if (duration === '1m') bannedUntil = new Date(now.setMonth(now.getMonth() + 1));
+
+        db.query("UPDATE users SET status = 'banned', banned_until = ?, ban_reason = ? WHERE id = ?", [bannedUntil, reason, freelancer_id], (e) => {
+          if (e) return res.status(500).json({ message: "Error restricting account" });
+          
+          db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Ban', ?)", 
+            [freelancer_id, `Freelancer (ID: ${freelancer_id}) restricted until ${bannedUntil.toLocaleString()} due to complaint`]);
+          db.query("UPDATE complaints SET status = 'Resolved', admin_response = ? WHERE id = ?", [`Freelancer restricted until ${bannedUntil.toLocaleString()}`, complaintId]);
+          
+          io.to("user_" + freelancer_id).emit("user_banned", { banned_until: bannedUntil, reason });
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: `Freelancer restricted until ${bannedUntil.toLocaleString()}.` });
+        });
+      } else if (action === 'ban') {
+        const bannedUntil = new Date('2099-12-31 23:59:59');
+        db.query("UPDATE users SET status = 'banned', banned_until = ?, ban_reason = ? WHERE id = ?", [bannedUntil, reason, freelancer_id], (e) => {
+          if (e) return res.status(500).json({ message: "Error banning user" });
+          
+          db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Ban', ?)", 
+            [freelancer_id, `Freelancer (ID: ${freelancer_id}) permanently banned due to complaint`]);
+          db.query("UPDATE complaints SET status = 'Resolved', admin_response = ? WHERE id = ?", [`Freelancer permanently banned: ${reason}`, complaintId]);
+          
+          io.to("user_" + freelancer_id).emit("user_banned", { banned_until: bannedUntil, reason });
+          io.to("admins").emit("refresh_admin_dashboard");
+          res.json({ message: "Freelancer permanently banned." });
+        });
+      } else {
+        res.status(400).json({ message: "Invalid dispute resolution action" });
+      }
+    };
+
+    executeAction();
+  });
+});
 
 server.listen(5000, () => {
   console.log("Server running on port 5000");

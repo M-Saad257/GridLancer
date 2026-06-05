@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import socket from '../socket';
 import ClientSettings from './ClientSettings';
-
 import ClientOverview from './ClientOverview';
 import ClientProjects from './ClientProjects';
+import CalendarView from '../components/CalendarView';
 
 const ClientDashboard = () => {
   const [client, setClient] = useState(null);
@@ -19,6 +19,51 @@ const ClientDashboard = () => {
   const [banDate, setBanDate] = useState(null);
   const [unbanRequested, setUnbanRequested] = useState(false);
   const [requestSending, setRequestSending] = useState(false);
+
+  // White label settings
+  const [branding, setBranding] = useState({ logo_url: null, primary_color: '#6366f1', subdomain: null });
+  const searchParams = new URLSearchParams(window.location.search);
+  const whiteLabelParam = searchParams.get('whiteLabel');
+
+  useEffect(() => {
+    const ownerId = whiteLabelParam || client?.user_id;
+    if (ownerId) {
+      axios.get(`http://localhost:5000/api/white-label/${ownerId}`)
+        .then(res => {
+          if (res.data) {
+            setBranding(res.data);
+          }
+        })
+        .catch(err => console.error("Error loading client branding settings:", err));
+    }
+  }, [client?.user_id, whiteLabelParam]);
+
+  useEffect(() => {
+    if (branding.primary_color) {
+      document.documentElement.style.setProperty('--primary-brand-color', branding.primary_color);
+    }
+    return () => {
+      document.documentElement.style.setProperty('--primary-brand-color', '#6366f1');
+    };
+  }, [branding.primary_color]);
+
+  const renderLogo = (sizeClass = "w-8 h-8") => {
+    if (branding.logo_url) {
+      return <img src={branding.logo_url} alt="Agency Logo" className={`${sizeClass} object-contain`} />;
+    }
+    return (
+      <div className={`${sizeClass} rounded-lg bg-[var(--primary-brand-color,#6366f1)] flex items-center justify-center font-bold text-xs`}>
+        GL
+      </div>
+    );
+  };
+
+  const renderLogoText = () => {
+    if (branding.subdomain) {
+      return <span className="capitalize">{branding.subdomain} Portal</span>;
+    }
+    return "GridLancer";
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('gridlancer_client');
@@ -109,8 +154,8 @@ const ClientDashboard = () => {
       {/* Mobile Header */}
       <div className="md:hidden h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-6 z-20 shrink-0">
         <div className="font-bold text-white text-lg flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-xs">GL</div>
-          GridLancer
+          {renderLogo("w-8 h-8")}
+          {renderLogoText()}
         </div>
         <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
@@ -131,26 +176,39 @@ const ClientDashboard = () => {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <div className="flex items-center gap-3 mb-8 mt-2 md:mt-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 overflow-hidden shrink-0">
+        <div className="flex items-center gap-3 mb-6 mt-2 md:mt-0">
+          {renderLogo("w-10 h-10")}
+          <div className="font-black text-white text-base tracking-wide truncate">
+            {renderLogoText()}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mb-6 bg-slate-950/40 p-3.5 rounded-2xl border border-slate-850 shadow-inner">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow overflow-hidden relative shrink-0">
             {client.image ? (
               <img src={client.image} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-white font-bold text-lg">{client.name ? client.name.charAt(0).toUpperCase() : 'C'}</span>
+              <span className="text-white font-bold text-sm">{client.name ? client.name.charAt(0).toUpperCase() : 'C'}</span>
             )}
           </div>
-          <div className="overflow-hidden">
-            <div className="text-white font-bold text-lg truncate">Client Portal</div>
-            <div className="text-slate-400 text-xs truncate">{client.name}</div>
+          <div className="overflow-hidden flex-1">
+            <div className="text-white font-bold text-xs truncate">{client.name}</div>
+            <div className="text-slate-500 text-[10px] truncate">Client Account</div>
           </div>
         </div>
 
         <div className="space-y-2">
-          {['Overview', 'My Projects', 'Settings'].map((item, i) => (
+          {['Overview', 'My Projects', 'Calendar', 'Settings'].map((item, i) => (
             <div
               key={i}
               onClick={() => { setActiveTab(item); setIsSidebarOpen(false); }}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all ${activeTab === item ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}>
+              style={activeTab === item ? {
+                backgroundColor: `${branding.primary_color}1a`, // 10% opacity
+                color: branding.primary_color,
+                borderColor: `${branding.primary_color}33`, // 20% opacity
+                borderWidth: '1px'
+              } : {}}
+              className={`px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all ${activeTab === item ? 'shadow-inner' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}>
               {item}
             </div>
           ))}
@@ -166,12 +224,13 @@ const ClientDashboard = () => {
 
       {/* Background Gradients */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none z-0" style={{ backgroundColor: `${branding.primary_color}12` }}></div>
 
       {/* Main Content Area */}
       <div className="flex-1 p-3 sm:p-6 md:p-10 flex flex-col z-10 overflow-y-auto custom-scrollbar">
         {activeTab === 'Overview' && <ClientOverview client={client} />}
         {activeTab === 'My Projects' && <ClientProjects client={client} />}
+        {activeTab === 'Calendar' && <CalendarView client={client} />}
         {activeTab === 'Settings' && <ClientSettings client={client} onClientUpdate={setClient} />}
       </div>
 
@@ -267,11 +326,46 @@ const ClientDashboard = () => {
       )}
 
       <style>{`
+        :root {
+          --primary-brand-color: ${branding.primary_color || '#6366f1'};
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Dynamic styling overrides for client dashboard */
+        .text-indigo-400, .text-indigo-300, .text-indigo-500 {
+          color: var(--primary-brand-color) !important;
+        }
+        .bg-indigo-500, .bg-indigo-650, .bg-indigo-600 {
+          background-color: var(--primary-brand-color) !important;
+        }
+        .hover\\:bg-indigo-450:hover, .hover\\:bg-indigo-600:hover, .hover\\:bg-indigo-500:hover {
+          background-color: var(--primary-brand-color) !important;
+          filter: brightness(0.9);
+        }
+        .border-indigo-500, .border-indigo-500\\/20, .border-indigo-500\\/25, .border-indigo-500\\/30, .border-indigo-500\\/40 {
+          border-color: var(--primary-brand-color) !important;
+        }
+        .bg-indigo-500\\/10 {
+          background-color: color-mix(in srgb, var(--primary-brand-color) 10%, transparent) !important;
+        }
+        .bg-indigo-500\\/20 {
+          background-color: color-mix(in srgb, var(--primary-brand-color) 20%, transparent) !important;
+        }
+        .from-indigo-500 {
+          --tw-gradient-from: var(--primary-brand-color) !important;
+          --tw-gradient-to: var(--primary-brand-color) !important;
+          --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+        }
+        .focus\\:ring-indigo-500:focus {
+          --tw-ring-color: var(--primary-brand-color) !important;
+        }
+        .focus\\:border-indigo-500:focus {
+          border-color: var(--primary-brand-color) !important;
+        }
       `}</style>
     </div>
   );
