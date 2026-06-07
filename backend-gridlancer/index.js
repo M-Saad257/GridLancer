@@ -58,38 +58,48 @@ io.on("connection", (socket) => {
   });
 
   socket.on("start_meeting", ({ projectId, projectTitle, roomName, senderName, senderType }) => {
-    db.query("SELECT user_id, client_id FROM projects WHERE id = ?", [projectId], (err, results) => {
-      if (!err && results && results.length > 0) {
-        const { user_id, client_id } = results[0];
-        socket.to("project_" + projectId).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
-        if (senderType === 'client') {
-          // Notify project owner
-          socket.to("user_" + user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
-          // Notify assigned team members
-          db.query("SELECT user_id FROM project_assignments WHERE project_id = ?", [projectId], (err2, assignRes) => {
-            if (!err2 && assignRes) {
-              assignRes.forEach(row => {
-                socket.to("user_" + row.user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
-              });
-            }
-          });
-        } else {
-          // Freelancer (owner or team member) started meeting
-          // Notify client
-          socket.to("client_" + client_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
-          // Notify owner
-          socket.to("user_" + user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
-          // Notify other assigned team members
-          db.query("SELECT user_id FROM project_assignments WHERE project_id = ?", [projectId], (err2, assignRes) => {
-            if (!err2 && assignRes) {
-              assignRes.forEach(row => {
-                socket.to("user_" + row.user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
-              });
-            }
-          });
+    db.query(
+      "SELECT p.user_id, p.client_id, u.plan FROM projects p JOIN users u ON p.user_id = u.id WHERE p.id = ?",
+      [projectId],
+      (err, results) => {
+        if (!err && results && results.length > 0) {
+          const { user_id, client_id, plan } = results[0];
+          const limits = getPlanLimits(plan);
+          if (!limits.videoCall) {
+            console.log(`Blocked start_meeting: Freelancer plan ${plan} does not allow video calls.`);
+            return;
+          }
+
+          socket.to("project_" + projectId).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
+          if (senderType === 'client') {
+            // Notify project owner
+            socket.to("user_" + user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
+            // Notify assigned team members
+            db.query("SELECT user_id FROM project_assignments WHERE project_id = ?", [projectId], (err2, assignRes) => {
+              if (!err2 && assignRes) {
+                assignRes.forEach(row => {
+                  socket.to("user_" + row.user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
+                });
+              }
+            });
+          } else {
+            // Freelancer (owner or team member) started meeting
+            // Notify client
+            socket.to("client_" + client_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
+            // Notify owner
+            socket.to("user_" + user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
+            // Notify other assigned team members
+            db.query("SELECT user_id FROM project_assignments WHERE project_id = ?", [projectId], (err2, assignRes) => {
+              if (!err2 && assignRes) {
+                assignRes.forEach(row => {
+                  socket.to("user_" + row.user_id).emit("meeting_started", { projectId, projectTitle, roomName, senderName, senderType });
+                });
+              }
+            });
+          }
         }
       }
-    });
+    );
   });
 
   socket.on("disconnect", () => {
@@ -623,20 +633,43 @@ app.post("/api/register", async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userPlan = (plan === 'Pro' || plan === 'Agency') ? plan : 'Starter';
+    const requestedPlan = (plan === 'Pro' || plan === 'Agency') ? plan : null;
+    const userPlan = 'Starter';
 
     const sql = "INSERT INTO users (name, email, password, plan, role) VALUES (?, ?, ?, ?, 'owner')";
 
-    db.query(sql, [name, email, hashedPassword, userPlan], (err, result) => {
+    db.query(sql, [name, email, hashedPassword, userPlan, 'owner'], (err, result) => {
       if (err) {
         console.log(err);
         return res.status(500).json({ message: "Error registering user" });
       }
 
+      const userId = result.insertId;
+
+      if (requestedPlan) {
+        db.query(
+          "INSERT INTO upgrade_requests (user_id, requested_plan, status, payment_status) VALUES (?, ?, 'Pending', 'Unpaid')",
+          [userId, requestedPlan],
+          (reqErr) => {
+            if (reqErr) {
+              console.log("Error inserting auto-upgrade request on registration:", reqErr);
+            } else {
+              db.query(
+                "INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Upgrade Requested', ?)",
+                [userId, `Freelancer registered and requested upgrade to ${requestedPlan}`],
+                () => {
+                  io.to("admins").emit("refresh_admin_dashboard");
+                }
+              );
+            }
+          }
+        );
+      }
+
       res.json({
         message: "User registered successfully",
         user: {
-          id: result.insertId,
+          id: userId,
           name: name,
           email: email,
           plan: userPlan,
@@ -691,38 +724,39 @@ app.post("/api/login", (req, res) => {
 
     const targetPlan = (plan === 'Pro' || plan === 'Agency') ? plan : null;
 
-    if (targetPlan && user.plan !== targetPlan) {
-      db.query("UPDATE users SET plan = ? WHERE id = ?", [targetPlan, user.id], (updErr) => {
-        if (updErr) {
-          console.log("Error updating plan on login:", updErr);
+    if (targetPlan && user.plan === 'Starter') {
+      db.query("SELECT * FROM upgrade_requests WHERE user_id = ? AND status = 'Pending'", [user.id], (errReq, reqs) => {
+        if (!errReq && reqs && reqs.length === 0) {
+          db.query(
+            "INSERT INTO upgrade_requests (user_id, requested_plan, status, payment_status) VALUES (?, ?, 'Pending', 'Unpaid')",
+            [user.id, targetPlan],
+            (insErr) => {
+              if (!insErr) {
+                db.query("INSERT INTO activity_log (user_id, activity_type, message) VALUES (?, 'Upgrade Requested', ?)",
+                  [user.id, `Freelancer logged in and requested upgrade to ${targetPlan}`],
+                  () => {
+                    io.to("admins").emit("refresh_admin_dashboard");
+                  }
+                );
+              }
+            }
+          );
         }
-        res.json({
-          message: "Login successful",
-          token,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image || null,
-            plan: targetPlan,
-            role: user.role || "owner"
-          },
-        });
-      });
-    } else {
-      res.json({
-        message: "Login successful",
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image || null,
-          plan: user.plan || "Starter",
-          role: user.role || "owner"
-        },
       });
     }
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image || null,
+        plan: user.plan || "Starter",
+        role: user.role || "owner"
+      },
+    });
   });
 });
 
@@ -1004,22 +1038,30 @@ app.post("/api/teams", (req, res) => {
     return res.status(400).json({ message: "Owner ID and Team Name are required" });
   }
 
-  // Check if owner already has a team
-  db.query("SELECT * FROM teams WHERE owner_id = ?", [ownerId], (err, results) => {
-    if (err) return res.status(500).json({ message: "Database error" });
-    if (results.length > 0) {
-      return res.status(400).json({ message: "You already have a team created." });
+  // Plan check
+  db.query("SELECT plan FROM users WHERE id = ?", [ownerId], (errPlan, planRows) => {
+    if (errPlan || planRows.length === 0) return res.status(500).json({ message: "User not found" });
+    if (planRows[0].plan !== 'Agency') {
+      return res.status(403).json({ message: "Team collaboration is only available on the Agency plan." });
     }
 
-    db.query("INSERT INTO teams (owner_id, name) VALUES (?, ?)", [ownerId, name], (err2, result) => {
-      if (err2) return res.status(500).json({ message: "Error creating team" });
-      res.json({
-        message: "Team created successfully",
-        team: {
-          id: result.insertId,
-          owner_id: ownerId,
-          name: name
-        }
+    // Check if owner already has a team
+    db.query("SELECT * FROM teams WHERE owner_id = ?", [ownerId], (err, results) => {
+      if (err) return res.status(500).json({ message: "Database error" });
+      if (results.length > 0) {
+        return res.status(400).json({ message: "You already have a team created." });
+      }
+
+      db.query("INSERT INTO teams (owner_id, name) VALUES (?, ?)", [ownerId, name], (err2, result) => {
+        if (err2) return res.status(500).json({ message: "Error creating team" });
+        res.json({
+          message: "Team created successfully",
+          team: {
+            id: result.insertId,
+            owner_id: ownerId,
+            name: name
+          }
+        });
       });
     });
   });
@@ -1133,44 +1175,52 @@ app.post("/api/teams/invite", async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-    if (err) return res.status(500).json({ message: "Database error" });
-    if (results.length > 0) {
-      return res.status(400).json({ message: "A user with this email already exists" });
+  // Plan check via team owner
+  db.query("SELECT u.plan FROM teams t JOIN users u ON t.owner_id = u.id WHERE t.id = ?", [teamId], (errPlan, planRows) => {
+    if (errPlan || planRows.length === 0) return res.status(500).json({ message: "Team or owner not found" });
+    if (planRows[0].plan !== 'Agency') {
+      return res.status(403).json({ message: "Team collaboration is only available on the Agency plan." });
     }
 
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const userSql = "INSERT INTO users (name, email, password, plan, role) VALUES (?, ?, ?, 'Agency', ?)";
-      db.query(userSql, [name, email, hashedPassword, role], (err2, result) => {
-        if (err2) {
-          console.log(err2);
-          return res.status(500).json({ message: "Error creating user account" });
-        }
+    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
+      if (err) return res.status(500).json({ message: "Database error" });
+      if (results.length > 0) {
+        return res.status(400).json({ message: "A user with this email already exists" });
+      }
 
-        const invitedUserId = result.insertId;
-
-        const tmSql = "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)";
-        db.query(tmSql, [teamId, invitedUserId, role], (err3) => {
-          if (err3) {
-            console.log(err3);
-            return res.status(500).json({ message: "Error linking user to team" });
+      try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const userSql = "INSERT INTO users (name, email, password, plan, role) VALUES (?, ?, ?, 'Agency', ?)";
+        db.query(userSql, [name, email, hashedPassword, role], (err2, result) => {
+          if (err2) {
+            console.log(err2);
+            return res.status(500).json({ message: "Error creating user account" });
           }
 
-          res.json({
-            message: "Member invited and user account created successfully",
-            user: {
-              id: invitedUserId,
-              name,
-              email,
-              role
+          const invitedUserId = result.insertId;
+
+          const tmSql = "INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)";
+          db.query(tmSql, [teamId, invitedUserId, role], (err3) => {
+            if (err3) {
+              console.log(err3);
+              return res.status(500).json({ message: "Error linking user to team" });
             }
+
+            res.json({
+              message: "Member invited and user account created successfully",
+              user: {
+                id: invitedUserId,
+                name,
+                email,
+                role
+              }
+            });
           });
         });
-      });
-    } catch (hashErr) {
-      res.status(500).json({ message: "Server error" });
-    }
+      } catch (hashErr) {
+        res.status(500).json({ message: "Server error" });
+      }
+    });
   });
 });
 
@@ -1201,28 +1251,39 @@ app.get("/api/projects/:id/assignments", (req, res) => {
 // Update project assignments
 app.put("/api/projects/:id/assignments", (req, res) => {
   const projectId = req.params.id;
-  const { assignedTo } = req.body;
+  const assignedTo = req.body.assignedTo || req.body.memberIds;
 
-  db.query("DELETE FROM project_assignments WHERE project_id = ?", [projectId], (err) => {
-    if (err) return res.status(500).json({ message: "Error clearing assignments" });
+  db.query(
+    "SELECT u.plan FROM projects p JOIN users u ON p.user_id = u.id WHERE p.id = ?",
+    [projectId],
+    (errPlan, planRows) => {
+      if (errPlan || planRows.length === 0) return res.status(500).json({ message: "Project or owner not found" });
+      if (planRows[0].plan !== 'Agency') {
+        return res.status(403).json({ message: "Team assignments are only available on the Agency plan." });
+      }
 
-    if (!Array.isArray(assignedTo) || assignedTo.length === 0) {
-      io.to("project_" + projectId).emit("project_details_updated");
-      return res.json({ message: "Assignments updated (cleared)" });
-    }
+      db.query("DELETE FROM project_assignments WHERE project_id = ?", [projectId], (err) => {
+        if (err) return res.status(500).json({ message: "Error clearing assignments" });
 
-    const values = assignedTo.map(uid => [projectId, uid]);
-    db.query("INSERT INTO project_assignments (project_id, user_id) VALUES ?", [values], (err2) => {
-      if (err2) return res.status(500).json({ message: "Error updating assignments" });
+        if (!Array.isArray(assignedTo) || assignedTo.length === 0) {
+          io.to("project_" + projectId).emit("project_details_updated");
+          return res.json({ message: "Assignments updated (cleared)" });
+        }
 
-      assignedTo.forEach(uid => {
-        io.to("user_" + uid).emit("project_list_updated");
+        const values = assignedTo.map(uid => [projectId, uid]);
+        db.query("INSERT INTO project_assignments (project_id, user_id) VALUES ?", [values], (err2) => {
+          if (err2) return res.status(500).json({ message: "Error updating assignments" });
+
+          assignedTo.forEach(uid => {
+            io.to("user_" + uid).emit("project_list_updated");
+          });
+          io.to("project_" + projectId).emit("project_details_updated");
+
+          res.json({ message: "Assignments updated successfully" });
+        });
       });
-      io.to("project_" + projectId).emit("project_details_updated");
-
-      res.json({ message: "Assignments updated successfully" });
-    });
-  });
+    }
+  );
 });
 
 app.put("/api/projects/:id", (req, res) => {
@@ -2838,39 +2899,64 @@ app.post("/api/meetings", (req, res) => {
     return res.status(400).json({ message: "Project ID, Title and Schedule time are required" });
   }
 
-  const salt = "gridlancer-secure-jitsi-meeting-room-salt-2026";
-  const uniqueHash = require('crypto').createHash('sha256').update(`${salt}-${project_id}-${scheduled_at}-${Date.now()}`).digest('hex');
-  const roomName = `gridlancer-project-${uniqueHash.substring(0, 24)}`;
+  // Plan limit check
+  db.query(
+    "SELECT u.plan FROM projects p JOIN users u ON p.user_id = u.id WHERE p.id = ?",
+    [project_id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: "Server error checking meeting limits" });
+      if (rows.length === 0) return res.status(404).json({ message: "Project or freelancer not found" });
 
-  const sql = "INSERT INTO meetings (project_id, title, description, scheduled_at, duration, room_name) VALUES (?, ?, ?, ?, ?, ?)";
-  db.query(sql, [project_id, title, description || null, scheduled_at, duration || 30, roomName], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json({ message: "Error scheduling meeting" });
-    }
+      const plan = rows[0].plan || 'Starter';
+      const limits = getPlanLimits(plan);
 
-    const meetingId = result.insertId;
-    const senderRole = user_type || 'freelancer';
-    const senderId = user_id || 0;
-    logProjectActivity(project_id, 'meeting_scheduled', `Meeting scheduled: "${title}" on ${new Date(scheduled_at).toLocaleString()}`, senderRole, senderId);
-
-    db.query("SELECT user_id, client_id, title as projectTitle FROM projects WHERE id = ?", [project_id], (err2, projRows) => {
-      if (!err2 && projRows.length > 0) {
-        const { user_id: freelancerId, client_id: clientId, projectTitle } = projRows[0];
-        
-        const emailContent = `Hello,\n\nA new video meeting has been scheduled for project "${projectTitle}".\n\nTitle: ${title}\nDescription: ${description || 'N/A'}\nScheduled Time: ${new Date(scheduled_at).toLocaleString()}\nDuration: ${duration || 30} mins\n\nPlease login to GridLancer to join at the scheduled time.`;
-        
-        sendSmartEmail(freelancerId, 'user', 'meetings', `New Meeting Scheduled: ${title}`, emailContent);
-        sendSmartEmail(clientId, 'client', 'meetings', `New Meeting Scheduled: ${title}`, emailContent);
-
-        io.to("project_" + project_id).emit("project_details_updated");
-        io.to("user_" + freelancerId).emit("notifications_updated");
-        io.to("client_" + clientId).emit("project_list_updated");
+      if (!limits.videoCall) {
+        return res.status(403).json({
+          message: "Video meetings are available on Pro and Agency plans. Upgrade to schedule a meeting.",
+          upgrade: true,
+          requiredPlan: 'Pro'
+        });
       }
-    });
 
-    res.json({ message: "Meeting scheduled successfully", meetingId });
-  });
+      proceedScheduleMeeting();
+    }
+  );
+
+  function proceedScheduleMeeting() {
+    const salt = "gridlancer-secure-jitsi-meeting-room-salt-2026";
+    const uniqueHash = require('crypto').createHash('sha256').update(`${salt}-${project_id}-${scheduled_at}-${Date.now()}`).digest('hex');
+    const roomName = `gridlancer-project-${uniqueHash.substring(0, 24)}`;
+
+    const sql = "INSERT INTO meetings (project_id, title, description, scheduled_at, duration, room_name) VALUES (?, ?, ?, ?, ?, ?)";
+    db.query(sql, [project_id, title, description || null, scheduled_at, duration || 30, roomName], (err, result) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Error scheduling meeting" });
+      }
+
+      const meetingId = result.insertId;
+      const senderRole = user_type || 'freelancer';
+      const senderId = user_id || 0;
+      logProjectActivity(project_id, 'meeting_scheduled', `Meeting scheduled: "${title}" on ${new Date(scheduled_at).toLocaleString()}`, senderRole, senderId);
+
+      db.query("SELECT user_id, client_id, title as projectTitle FROM projects WHERE id = ?", [project_id], (err2, projRows) => {
+        if (!err2 && projRows.length > 0) {
+          const { user_id: freelancerId, client_id: clientId, projectTitle } = projRows[0];
+          
+          const emailContent = `Hello,\n\nA new video meeting has been scheduled for project "${projectTitle}".\n\nTitle: ${title}\nDescription: ${description || 'N/A'}\nScheduled Time: ${new Date(scheduled_at).toLocaleString()}\nDuration: ${duration || 30} mins\n\nPlease login to GridLancer to join at the scheduled time.`;
+          
+          sendSmartEmail(freelancerId, 'user', 'meetings', `New Meeting Scheduled: ${title}`, emailContent);
+          sendSmartEmail(clientId, 'client', 'meetings', `New Meeting Scheduled: ${title}`, emailContent);
+
+          io.to("project_" + project_id).emit("project_details_updated");
+          io.to("user_" + freelancerId).emit("notifications_updated");
+          io.to("client_" + clientId).emit("project_list_updated");
+        }
+      });
+
+      res.json({ message: "Meeting scheduled successfully", meetingId });
+    });
+  }
 });
 
 app.delete("/api/meetings/:id", (req, res) => {

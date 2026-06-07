@@ -129,7 +129,7 @@ const ClientLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="h-screen bg-slate-950 flex flex-col justify-center py-6 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background Gradients (Themed dynamically) */}
       <div 
         className="absolute top-0 right-0 w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-all duration-700"
@@ -137,45 +137,46 @@ const ClientLogin = () => {
       ></div>
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-650/5 blur-[120px] rounded-full pointer-events-none"></div>
       
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
-        <div className="flex flex-col items-center justify-center gap-3">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10 flex flex-col items-center justify-center px-4">
+        <div className="flex items-center justify-center gap-3.5 flex-wrap">
           {branding.logo_url ? (
             <img 
               src={branding.logo_url} 
               alt="Agency Logo" 
-              className="max-h-16 max-w-[200px] object-contain mb-2 animate-fadeIn" 
+              className="max-h-10 max-w-[140px] object-contain animate-fadeIn" 
             />
           ) : (
-            <Link to="/" className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary-brand-color,#6366f1)] to-purple-400">
+            <Link to="/" className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-400">
               GridLancer
             </Link>
           )}
+          
+          <h2 className="text-2xl font-black text-white tracking-tight">
+            {branding.subdomain ? (
+              <span className="capitalize">{branding.subdomain} Login</span>
+            ) : (
+              "Client Login"
+            )}
+          </h2>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-black text-white tracking-tight">
+        <p className="mt-1.5 text-center text-[11px] text-slate-450 font-medium leading-normal max-w-sm">
           {branding.subdomain ? (
-            <span className="capitalize">{branding.subdomain} Client Login</span>
-          ) : (
-            "Client Portal Login"
-          )}
-        </h2>
-        <p className="mt-2 text-center text-xs text-slate-450 font-medium leading-relaxed">
-          {branding.subdomain ? (
-            `Welcome to ${branding.subdomain}'s workspace. Enter your credentials to access your project portal.`
+            `Welcome to ${branding.subdomain}'s workspace. Enter your credentials.`
           ) : (
             "Enter the client workspace access credentials provided by your agency."
           )}
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-slate-900 py-8 px-4 shadow-2xl shadow-indigo-500/10 sm:rounded-3xl sm:px-10 border border-slate-800">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0">
+        <div className="bg-slate-900 py-6 px-4 shadow-2xl shadow-indigo-500/10 sm:rounded-3xl sm:px-8 border border-slate-800">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">
                 Email address
               </label>
               <div className="mt-1">
-                <input 
+                 <input 
                   id="email" 
                   name="email" 
                   type="email" 
@@ -183,7 +184,7 @@ const ClientLogin = () => {
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   onBlur={() => handleEmailBlur(emailInput)}
-                  className="appearance-none block w-full px-4 py-3 border border-slate-800 focus:border-[var(--primary-brand-color)] rounded-xl shadow-sm placeholder-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-[var(--primary-brand-color)] sm:text-sm transition-all bg-slate-950/80 font-medium" 
+                  className="appearance-none block w-full px-4 py-3 border border-slate-800 focus:border-indigo-500 rounded-xl shadow-sm placeholder-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm transition-all bg-slate-950/80 font-medium" 
                   placeholder="client@company.com" 
                 />
               </div>
@@ -194,12 +195,12 @@ const ClientLogin = () => {
                 Access Password
               </label>
               <div className="mt-1">
-                <input 
+                 <input 
                   id="password" 
                   name="password" 
                   type="password" 
                   required 
-                  className="appearance-none block w-full px-4 py-3 border border-slate-800 focus:border-[var(--primary-brand-color)] rounded-xl shadow-sm placeholder-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-[var(--primary-brand-color)] sm:text-sm transition-all bg-slate-950/80 font-medium" 
+                  className="appearance-none block w-full px-4 py-3 border border-slate-800 focus:border-indigo-500 rounded-xl shadow-sm placeholder-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm transition-all bg-slate-950/80 font-medium" 
                   placeholder="********" 
                 />
               </div>
@@ -207,7 +208,7 @@ const ClientLogin = () => {
 
             <div className="flex justify-end">
               <div className="text-xs">
-                <Link to="/login" className="font-semibold text-[var(--primary-brand-color,#6366f1)] hover:text-indigo-400 transition-colors">
+                 <Link to="/login" className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
                   Are you a freelancer? Login here
                 </Link>
               </div>
@@ -216,8 +217,8 @@ const ClientLogin = () => {
             <div>
               <button 
                 type="submit" 
-                disabled={isSubmitting} 
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-[var(--primary-brand-color,#6366f1)] to-indigo-650 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-brand-color,#6366f1)] transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting}                 
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-500 to-indigo-650 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: `linear-gradient(135deg, ${branding.primary_color || '#6366f1'}, ${branding.primary_color ? branding.primary_color + 'cc' : '#4f46e5'})`
                 }}
@@ -230,21 +231,21 @@ const ClientLogin = () => {
       </div>
 
       {/* Toast Notification */}
-      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
-        <div className={`bg-slate-900 border ${toastMessage.type === 'success' ? 'border-emerald-500/50 shadow-emerald-500/20' : 'border-rose-500/50 shadow-rose-500/20'} shadow-2xl rounded-2xl p-5 pr-12 flex items-start gap-4 relative`}>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+      <div className={`fixed bottom-6 right-6 left-6 sm:left-auto sm:w-96 z-[9999] transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+        <div className={`bg-slate-900/95 backdrop-blur-md border ${toastMessage.type === 'success' ? 'border-emerald-500/30 shadow-emerald-500/10' : 'border-rose-500/30 shadow-rose-500/10'} shadow-2xl rounded-2xl p-4 pr-10 flex items-start gap-3.5 relative`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
             {toastMessage.type === 'success' ? (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             ) : (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
             )}
           </div>
-          <div>
-            <h4 className="text-white font-bold text-lg">{toastMessage.title}</h4>
-            <p className="text-slate-400 text-sm mt-1">{toastMessage.desc}</p>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-white font-bold text-sm leading-snug">{toastMessage.title || (toastMessage.type === 'success' ? 'Success' : 'Error')}</h4>
+            {toastMessage.desc && <p className="text-slate-400 text-xs mt-1 leading-relaxed">{toastMessage.desc}</p>}
           </div>
           <button onClick={() => setShowToast(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
       </div>
@@ -312,14 +313,42 @@ const ClientLogin = () => {
         .animate-fadeIn { animation: fadeIn 0.4s ease forwards; }
 
         /* Dynamic styling overrides */
-        .text-indigo-400, .text-indigo-500 {
+        .text-indigo-450, .text-indigo-400, .text-indigo-350, .text-indigo-300, .text-indigo-500 {
           color: var(--primary-brand-color) !important;
         }
-        .focus\\:ring-indigo-500:focus, .focus\\:ring-[var(--primary-brand-color)]:focus {
+        .bg-indigo-500, .bg-indigo-650, .bg-indigo-600 {
+          background-color: var(--primary-brand-color) !important;
+        }
+        .hover\\:bg-indigo-450:hover, .hover\\:bg-indigo-600:hover, .hover\\:bg-indigo-500:hover {
+          background-color: var(--primary-brand-color) !important;
+          filter: brightness(0.9);
+        }
+        .border-indigo-500, .border-indigo-500\\/20, .border-indigo-500\\/25, .border-indigo-500\\/30, .border-indigo-500\\/40 {
+          border-color: var(--primary-brand-color) !important;
+        }
+        .bg-indigo-500\\/10 {
+          background-color: color-mix(in srgb, var(--primary-brand-color) 10%, transparent) !important;
+        }
+        .bg-indigo-500\\/20 {
+          background-color: color-mix(in srgb, var(--primary-brand-color) 20%, transparent) !important;
+        }
+        .from-indigo-500, .from-indigo-600, .from-indigo-650 {
+          --tw-gradient-from: var(--primary-brand-color) !important;
+          --tw-gradient-to: var(--primary-brand-color) !important;
+          --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+        }
+        .to-purple-400, .to-purple-500, .to-purple-600, .to-purple-650 {
+          --tw-gradient-to: var(--primary-brand-color) !important;
+        }
+        .focus\\:ring-indigo-500:focus {
           --tw-ring-color: var(--primary-brand-color) !important;
         }
-        .focus\\:border-indigo-500:focus, .focus\\:border-[var(--primary-brand-color)]:focus {
+        .focus\\:border-indigo-500:focus {
           border-color: var(--primary-brand-color) !important;
+        }
+        .hover\\:text-indigo-300:hover {
+          color: var(--primary-brand-color) !important;
+          opacity: 0.85;
         }
         .shadow-indigo-500\\/10 {
           --tw-shadow-color: color-mix(in srgb, var(--primary-brand-color) 10%, transparent) !important;

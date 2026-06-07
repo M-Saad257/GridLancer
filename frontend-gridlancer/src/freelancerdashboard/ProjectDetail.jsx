@@ -10,6 +10,20 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState({ title: '', desc: '', type: 'success' });
   const [activeTab, setActiveTab] = useState('Overview');
+  const [parentTab, setParentTab] = useState('Workspace');
+
+  const tabGroups = {
+    'Workspace': ['Overview', 'Tasks', 'Files & Assets'],
+    'Finances': ['Milestones', 'Time Tracking', ...(user?.role !== 'member' ? ['Invoices'] : [])],
+    'Agreements & Setup': ['Contracts', 'Activity Feed', ...(user?.role !== 'member' ? ['Settings'] : [])]
+  };
+
+  useEffect(() => {
+    const foundGroup = Object.keys(tabGroups).find(group => tabGroups[group].includes(activeTab));
+    if (foundGroup && foundGroup !== parentTab) {
+      setParentTab(foundGroup);
+    }
+  }, [activeTab]);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
@@ -1116,13 +1130,44 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
         <div className="flex-[3] bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-8 flex flex-col shadow-xl relative xl:overflow-hidden shrink-0">
           <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${project.color || 'from-indigo-500 to-purple-500'}`}></div>
 
-          {/* Tabs */}
-          <div className="flex gap-2 sm:gap-6 border-b border-slate-800 mb-6 overflow-x-auto pb-2 custom-scrollbar">
-            {['Overview', 'Tasks', 'Files & Assets', 'Milestones', 'Contracts', 'Time Tracking', 'Activity Feed', ...(user?.role !== 'member' ? ['Invoices', 'Settings'] : [])].map(tab => (
+          {/* Grouped Tabs Categories */}
+          <div className="flex gap-2 sm:gap-3 border-b border-slate-800 pb-3.5 mb-3.5 overflow-x-auto custom-scrollbar select-none">
+            {Object.keys(tabGroups).map(group => {
+              const isSelected = parentTab === group;
+              let icon = "🛠️";
+              if (group === "Finances") icon = "💼";
+              if (group === "Agreements & Setup") icon = "⚙️";
+              
+              return (
+                <button
+                  key={group}
+                  onClick={() => {
+                    setParentTab(group);
+                    if (tabGroups[group] && tabGroups[group].length > 0) {
+                      setActiveTab(tabGroups[group][0]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5 shrink-0 border ${
+                    isSelected 
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-650 text-white shadow-md shadow-indigo-650/20 border-indigo-500/30' 
+                      : 'bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border-slate-850'
+                  }`}
+                >
+                  <span>{icon}</span> {group}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sub Tabs */}
+          <div className="flex gap-4 sm:gap-6 border-b border-slate-800/40 mb-6 overflow-x-auto pb-2.5 custom-scrollbar select-none">
+            {(tabGroups[parentTab] || []).map(tab => (
               <div
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-sm font-bold cursor-pointer transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`pb-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors relative whitespace-nowrap ${
+                  activeTab === tab ? 'text-indigo-400 font-extrabold' : 'text-slate-500 hover:text-slate-350'
+                }`}
               >
                 {tab}
                 {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500 rounded-t-full shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>}
@@ -1906,21 +1951,21 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       `}</style>
 
       {/* Toast Notification */}
-      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
-        <div className={`bg-slate-900 border ${toastMessage.type === 'success' ? 'border-emerald-500/50 shadow-emerald-500/20' : 'border-rose-500/50 shadow-rose-500/20'} shadow-2xl rounded-2xl p-5 pr-12 flex items-start gap-4 relative`}>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+      <div className={`fixed bottom-6 right-6 left-6 sm:left-auto sm:w-96 z-[9999] transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+        <div className={`bg-slate-900/95 backdrop-blur-md border ${toastMessage.type === 'success' ? 'border-emerald-500/30 shadow-emerald-500/10' : 'border-rose-500/30 shadow-rose-500/10'} shadow-2xl rounded-2xl p-4 pr-10 flex items-start gap-3.5 relative`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${toastMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
             {toastMessage.type === 'success' ? (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             ) : (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
             )}
           </div>
-          <div>
-            <h4 className="text-white font-bold text-lg">{toastMessage.title}</h4>
-            <p className="text-slate-400 text-sm mt-1">{toastMessage.desc}</p>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-white font-bold text-sm leading-snug">{toastMessage.title || (toastMessage.type === 'success' ? 'Success' : 'Error')}</h4>
+            {toastMessage.desc && <p className="text-slate-400 text-xs mt-1 leading-relaxed">{toastMessage.desc}</p>}
           </div>
           <button onClick={() => setShowToast(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
       </div>

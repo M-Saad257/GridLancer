@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated }) => {
+const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated, planLimits }) => {
   const [formData, setFormData] = useState({
     projectName: '',
     clientName: '',
@@ -90,37 +90,39 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated }) => {
     setIsSubmitting(true);
     setError('');
 
-    // Check Starter plan limits
-    if (user.plan === 'Starter') {
-      try {
-        const clientsRes = await axios.get(`http://localhost:5000/api/clients/${user.id}`);
-        const currentClients = clientsRes.data;
+    // Check plan limits dynamically using planLimits
+    const maxClients = planLimits?.limits?.maxClients || 3;
+    const maxProjects = planLimits?.limits?.maxProjects || 3;
+    const currentPlanName = planLimits?.plan || user.plan || 'Starter';
 
-        // 1. Client limit check
-        const clientExists = currentClients.some(c => c.email.toLowerCase() === formData.clientEmail.toLowerCase());
-        if (!clientExists && currentClients.length >= 5) {
-          setError("Starter plan limit reached: You can have a maximum of 5 clients. Please upgrade to Pro or Agency to add more!");
-          setIsSubmitting(false);
-          return;
-        }
+    try {
+      const clientsRes = await axios.get(`http://localhost:5000/api/clients/${user.id}`);
+      const currentClients = clientsRes.data;
 
-        // 2. Project limit check
-        let count = 0;
-        for (const cl of currentClients) {
-          const projectsRes = await axios.get(`http://localhost:5000/api/projects/${cl.id}`);
-          count += projectsRes.data.length;
-        }
-        if (count >= 5) {
-          setError("Starter plan limit reached: You can create a maximum of 5 projects. Please upgrade to Pro or Agency to build more!");
-          setIsSubmitting(false);
-          return;
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Error validating subscription plan limits. Please try again.");
+      // 1. Client limit check
+      const clientExists = currentClients.some(c => c.email.toLowerCase() === formData.clientEmail.toLowerCase());
+      if (!clientExists && currentClients.length >= maxClients) {
+        setError(`${currentPlanName} plan limit reached: You can have a maximum of ${maxClients} client(s). Please upgrade your plan to add more!`);
         setIsSubmitting(false);
         return;
       }
+
+      // 2. Project limit check
+      let count = 0;
+      for (const cl of currentClients) {
+        const projectsRes = await axios.get(`http://localhost:5000/api/projects/${cl.id}`);
+        count += projectsRes.data.length;
+      }
+      if (count >= maxProjects) {
+        setError(`${currentPlanName} plan limit reached: You can create a maximum of ${maxProjects} project(s). Please upgrade your plan to build more!`);
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Error validating subscription plan limits. Please try again.");
+      setIsSubmitting(false);
+      return;
     }
 
     try {

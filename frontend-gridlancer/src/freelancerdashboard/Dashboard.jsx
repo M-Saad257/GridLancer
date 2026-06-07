@@ -32,7 +32,7 @@ const Dashboard = () => {
   // Plan limits state
   const [planLimits, setPlanLimits] = useState({
     plan: 'Starter',
-    limits: { maxProjects: 3, maxClients: 3, maxFiles: 3, realtime: false, analytics: false, invoiceTracking: false },
+    limits: { maxProjects: 3, maxClients: 3, maxFiles: 3, realtime: false, analytics: false, invoiceTracking: false, videoCall: false },
     usage: { projects: 0, clients: 0 }
   });
 
@@ -69,7 +69,11 @@ const Dashboard = () => {
   const fetchUpgradeStatus = async (userId) => {
     try {
       const requestRes = await axios.get(`http://localhost:5000/api/upgrade-requests/user/${userId}`);
-      setPendingRequest(requestRes.data.request);
+      const req = requestRes.data.request;
+      setPendingRequest(req);
+      if (req && req.status === 'Pending') {
+        setShowPaymentModal(true);
+      }
     } catch (e) {
       console.error("Failed to fetch upgrade request:", e);
     }
@@ -308,12 +312,24 @@ const Dashboard = () => {
     <div className="h-screen bg-slate-950 text-white flex flex-col md:flex-row overflow-hidden relative font-sans">
 
       {/* Toast Notification */}
-      {toast.show && (
-        <div className="fixed top-4 right-4 sm:top-6 sm:right-6 left-4 sm:left-auto z-50 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl border shadow-xl flex items-center gap-3 animate-bounce bg-slate-900 border-slate-800">
-          <div className={`w-3 h-3 rounded-full ${toast.type === 'success' ? 'bg-indigo-500' : 'bg-red-500'}`}></div>
-          <p className="text-sm font-semibold">{toast.message}</p>
+      <div className={`fixed bottom-6 right-6 left-6 sm:left-auto sm:w-96 z-[9999] transform transition-all duration-500 ease-out ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+        <div className={`bg-slate-900/95 backdrop-blur-md border ${toast.type === 'success' ? 'border-emerald-500/30 shadow-emerald-500/10' : 'border-rose-500/30 shadow-rose-500/10'} shadow-2xl rounded-2xl p-4 pr-10 flex items-start gap-3.5 relative`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-white font-bold text-sm leading-snug">{toast.type === 'success' ? 'Notification' : 'Error'}</h4>
+            <p className="text-slate-400 text-xs mt-1 leading-relaxed">{toast.message}</p>
+          </div>
+          <button onClick={() => setToast({ ...toast, show: false })} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Mobile Header */}
       <div className="md:hidden h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-6 z-20 shrink-0">
@@ -335,31 +351,31 @@ const Dashboard = () => {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-64 min-h-screen border-r border-slate-800 bg-slate-900 p-6 flex flex-col gap-6 z-40 transition-transform duration-300 md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 w-64 h-screen border-r border-slate-800 bg-slate-900 py-4 px-4 flex flex-col gap-3.5 z-40 transition-transform duration-300 md:relative md:translate-x-0 overflow-y-auto overflow-x-hidden md:overflow-hidden select-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <button onClick={() => setIsSidebarOpen(false)} className="md:hidden absolute top-6 right-6 text-slate-400 hover:text-white bg-slate-800 rounded-full p-1 z-50">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
         {/* User Card with Subscription Upgrades info */}
-        <div className="flex flex-col gap-3 mb-2 mt-2 md:mt-0 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60 shadow-inner">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 overflow-hidden relative shrink-0">
+        <div className="flex flex-col gap-2.5 bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/60 shadow-inner">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 overflow-hidden relative shrink-0">
               {user.image ? (
                 <img src={user.image} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-white font-bold text-lg">{user.name ? user.name.charAt(0).toUpperCase() : 'C'}</span>
+                <span className="text-white font-bold text-base">{user.name ? user.name.charAt(0).toUpperCase() : 'C'}</span>
               )}
             </div>
             <div className="overflow-hidden flex-1">
-              <div className="text-white font-bold text-sm truncate">{user.name}</div>
-              <div className="text-slate-400 text-[10px] truncate">{user.email}</div>
+              <div className="text-white font-bold text-xs truncate">{user.name}</div>
+              <div className="text-slate-400 text-[9px] truncate">{user.email}</div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-slate-850 pt-2.5 mt-1">
+          <div className="flex items-center justify-between border-t border-slate-850 pt-2 mt-0.5">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Plan Status</span>
-              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider w-max ${user.plan === 'Agency' ? 'bg-gradient-to-r from-purple-500 to-indigo-650 text-white' :
+              <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider">Plan Status</span>
+              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider w-max ${user.plan === 'Agency' ? 'bg-gradient-to-r from-purple-500 to-indigo-650 text-white' :
                   user.plan === 'Pro' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
                     'bg-slate-800 text-slate-400 border border-slate-700'
                 }`}>
@@ -369,17 +385,17 @@ const Dashboard = () => {
 
             <button
               onClick={handleUpgradeClick}
-              className="px-2.5 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-450 hover:to-purple-550 text-white font-bold text-[9px] rounded-lg shadow shadow-indigo-500/10 cursor-pointer transition-all flex items-center gap-1 shrink-0"
+              className="px-2 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-450 hover:to-purple-550 text-white font-bold text-[8px] rounded-lg shadow shadow-indigo-500/10 cursor-pointer transition-all flex items-center gap-1 shrink-0"
             >
               {user.plan === 'Starter' ? 'Upgrade Plan' : 'Change Plan'}
             </button>
           </div>
 
           {pendingRequest && pendingRequest.status === 'Pending' && (
-            <div className="mt-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-405 text-[9px] font-bold p-2 rounded-lg flex flex-col items-center justify-center gap-1.5 shadow-inner">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping"></div>
-                Upgrade Pending Approval
+            <div className="mt-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-405 text-[8px] font-bold p-1.5 rounded-lg flex flex-col items-center justify-center gap-1 shadow-inner">
+              <div className="flex items-center gap-1">
+                <div className="w-1 h-1 rounded-full bg-yellow-400 animate-ping"></div>
+                Upgrade Pending
               </div>
               <button
                 onClick={() => {
@@ -387,7 +403,7 @@ const Dashboard = () => {
                   fetchUpgradeStatus(user.id);
                   showToast('Checking upgrade status...', 'success');
                 }}
-                className="w-full py-1 bg-yellow-500/20 hover:bg-yellow-500/35 border border-yellow-500/30 text-yellow-300 font-extrabold text-[8px] uppercase tracking-wider transition-all cursor-pointer text-center rounded-md"
+                className="w-full py-0.5 bg-yellow-500/20 hover:bg-yellow-500/35 border border-yellow-500/30 text-yellow-300 font-extrabold text-[8px] uppercase tracking-wider transition-all cursor-pointer text-center rounded-md"
               >
                 Check Status
               </button>
@@ -395,7 +411,7 @@ const Dashboard = () => {
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {(() => {
             const tabs = user.role === 'member' 
               ? ['Overview', 'Projects', 'Calendar']
@@ -417,7 +433,7 @@ const Dashboard = () => {
                       fetchUpgradeStatus(user.id);
                     }
                   }}
-                  className={`px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all ${activeTab === item ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}>
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${activeTab === item ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}>
                   {displayName}
                 </div>
               );
@@ -425,8 +441,8 @@ const Dashboard = () => {
           })()}
         </div>
 
-        <div className="mt-auto space-y-4">
-          <button onClick={handleLogout} className="w-full py-3 px-4 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-sm font-semibold text-left flex items-center gap-2">
+        <div className="mt-auto">
+          <button onClick={handleLogout} className="w-full py-2 px-3 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-xs font-semibold text-left flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             Sign Out
           </button>

@@ -82,12 +82,24 @@ const WhiteLabelSettings = ({ user }) => {
   return (
     <div className="flex flex-col xl:flex-row gap-8 animate-fadeIn">
       {/* Toast */}
-      {toast.show && (
-        <div className="fixed top-4 right-4 z-50 px-5 py-3 rounded-2xl border shadow-xl flex items-center gap-3 animate-bounce bg-slate-900 border-slate-800">
-          <div className={`w-3 h-3 rounded-full ${toast.type === 'success' ? 'bg-indigo-500' : 'bg-rose-500'}`}></div>
-          <p className="text-sm font-semibold">{toast.message}</p>
+      <div className={`fixed bottom-6 right-6 left-6 sm:left-auto sm:w-96 z-[9999] transform transition-all duration-500 ease-out ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
+        <div className={`bg-slate-900/95 backdrop-blur-md border ${toast.type === 'success' ? 'border-emerald-500/30 shadow-emerald-500/10' : 'border-rose-500/30 shadow-rose-500/10'} shadow-2xl rounded-2xl p-4 pr-10 flex items-start gap-3.5 relative`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-white font-bold text-sm leading-snug">{toast.type === 'success' ? 'Notification' : 'Error'}</h4>
+            <p className="text-slate-400 text-xs mt-1 leading-relaxed">{toast.message}</p>
+          </div>
+          <button onClick={() => setToast({ ...toast, show: false })} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Settings Form */}
       <div className="flex-1 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col justify-between">

@@ -355,10 +355,13 @@ const ClientDashboard = () => {
         .bg-indigo-500\\/20 {
           background-color: color-mix(in srgb, var(--primary-brand-color) 20%, transparent) !important;
         }
-        .from-indigo-500 {
+        .from-indigo-500, .from-indigo-600, .from-indigo-650 {
           --tw-gradient-from: var(--primary-brand-color) !important;
           --tw-gradient-to: var(--primary-brand-color) !important;
           --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+        }
+        .to-purple-400, .to-purple-500, .to-purple-600, .to-purple-650 {
+          --tw-gradient-to: var(--primary-brand-color) !important;
         }
         .focus\\:ring-indigo-500:focus {
           --tw-ring-color: var(--primary-brand-color) !important;
