@@ -643,6 +643,9 @@ const Dashboard = () => {
                     <li className="flex items-center gap-2">
                       <span className="text-purple-400">✔️</span> Team members & collaboration
                     </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-purple-400">✔️</span> White label branding & portal
+                    </li>
                   </ul>
                 </div>
                 {user.plan === 'Agency' ? (

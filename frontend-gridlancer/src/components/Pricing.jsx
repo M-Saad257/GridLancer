@@ -74,6 +74,7 @@ const Pricing = () => {
               <li className="flex items-center text-slate-300"><span className="text-indigo-400 mr-3 text-lg font-bold">✔</span> Complaint tracking & status</li>
               <li className="flex items-center text-slate-300"><span className="text-indigo-400 mr-3 text-lg font-bold">✔</span> Video Call</li>
               <li className="flex items-center text-slate-300"><span className="text-indigo-400 mr-3 text-lg font-bold">✔</span> Team members & collaboration</li>
+              <li className="flex items-center text-slate-300"><span className="text-indigo-400 mr-3 text-lg font-bold">✔</span> White label branding & portal</li>
             </ul>
             <button onClick={() => navigate('/signup?plan=Agency')} className="mt-8 w-full py-4 px-4 border border-slate-700 text-white cursor-pointer font-bold rounded-xl hover:bg-slate-800 transition-colors">Get Started <span className='text-xl ml-1'>→</span></button>
           </div>
