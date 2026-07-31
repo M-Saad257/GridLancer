@@ -12,11 +12,11 @@ const Clients = ({ user }) => {
       if (!user?.id) return;
       try {
         setIsLoading(true);
-        const clientsRes = await axios.get(`http://localhost:5000/api/clients/${user.id}`);
+        const clientsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/clients/${user.id}`);
         const clientsData = clientsRes.data;
         
         const clientsWithProjects = await Promise.all(clientsData.map(async (client) => {
-          const projectsRes = await axios.get(`http://localhost:5000/api/projects/${client.id}`);
+          const projectsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${client.id}`);
           return {
             ...client,
             projects: projectsRes.data
@@ -36,7 +36,7 @@ const Clients = ({ user }) => {
   const handleDeleteClient = async (clientId, clientName) => {
     if (!window.confirm(`Are you sure you want to delete ${clientName}? This will also delete all their projects and cannot be undone.`)) return;
     try {
-      await axios.delete(`http://localhost:5000/api/clients/${clientId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/clients/${clientId}`);
       setClients(clients.filter(c => c.id !== clientId));
       setToastMessage({
         title: 'Client Deleted',
@@ -61,7 +61,7 @@ const Clients = ({ user }) => {
     e.stopPropagation();
     if (!window.confirm(`Are you sure you want to delete "${projectTitle}"? This cannot be undone.`)) return;
     try {
-      await axios.delete(`http://localhost:5000/api/projects/${projectId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/projects/${projectId}`);
       setClients(clients.map(c => {
         if (c.id === clientId) {
           return { ...c, projects: c.projects.filter(p => p.id !== projectId) };

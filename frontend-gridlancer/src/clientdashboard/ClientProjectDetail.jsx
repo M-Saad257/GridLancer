@@ -42,7 +42,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
     setIsSubmittingComplaint(true);
     try {
-      await axios.post('http://localhost:5000/api/complaints', {
+      await axios.post('https://gridlancer-production.up.railway.app/api/complaints', {
         client_id: client.id,
         freelancer_id: project.user_id,
         project_id: project.id,
@@ -77,7 +77,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
   const fetchComplaints = () => {
     setLoadingComplaints(true);
-    axios.get(`http://localhost:5000/api/projects/${project.id}/complaints?t=${Date.now()}`)
+    axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/complaints?t=${Date.now()}`)
       .then(res => {
         setComplaints(res.data);
         setLoadingComplaints(false);
@@ -122,7 +122,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   // Fetch milestones
   useEffect(() => {
     const fetchMilestones = () => {
-      axios.get(`http://localhost:5000/api/milestones/project/${project.id}?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/milestones/project/${project.id}?t=${Date.now()}`)
         .then(res => setMilestones(res.data))
         .catch(console.error);
     };
@@ -139,7 +139,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   // Fetch contracts
   useEffect(() => {
     const fetchContracts = () => {
-      axios.get(`http://localhost:5000/api/contracts/project/${project.id}?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/contracts/project/${project.id}?t=${Date.now()}`)
         .then(res => setContracts(res.data))
         .catch(console.error);
     };
@@ -156,7 +156,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   // Fetch time logs
   useEffect(() => {
     const fetchTimeLogs = () => {
-      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/time-entries/project/${project.id}?t=${Date.now()}`)
         .then(res => setTimeLogs(res.data))
         .catch(console.error);
     };
@@ -173,7 +173,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   // Fetch activities
   useEffect(() => {
     const fetchActivities = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/activities?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/activities?t=${Date.now()}`)
         .then(res => setActivities(res.data))
         .catch(console.error);
     };
@@ -189,7 +189,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
   useEffect(() => {
     const fetchInvoices = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/invoices?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/invoices?t=${Date.now()}`)
         .then(res => setInvoices(res.data))
         .catch(console.error);
     };
@@ -222,7 +222,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   // Fetch tasks when tab is opened
   useEffect(() => {
     const fetchTasks = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/tasks?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/tasks?t=${Date.now()}`)
         .then(res => setTasks(res.data))
         .catch(console.error);
     };
@@ -239,7 +239,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   // Fetch files when tab is opened
   useEffect(() => {
     const fetchFiles = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/files?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/files?t=${Date.now()}`)
         .then(res => setFiles(res.data))
         .catch(console.error);
     };
@@ -255,7 +255,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
   const fetchMessages = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/projects/${project.id}/messages?t=${Date.now()}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages?t=${Date.now()}`);
       const newMessages = res.data;
 
       // Play sound if new messages arrived from someone else
@@ -274,7 +274,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       previousMessageCount.current = newMessages.length;
 
       // Fetch typing status
-      const typingRes = await axios.get(`http://localhost:5000/api/projects/${project.id}/typing?t=${Date.now()}`);
+      const typingRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/typing?t=${Date.now()}`);
       setIsFreelancerTyping(typingRes.data.freelancer);
 
     } catch (err) {
@@ -318,7 +318,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
     const now = Date.now();
     if (now - lastTypingTimeRef.current > 2000) {
       lastTypingTimeRef.current = now;
-      axios.post(`http://localhost:5000/api/projects/${project.id}/typing`, { user_type: 'client' }).catch(() => { });
+      axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/typing`, { user_type: 'client' }).catch(() => { });
     }
   };
 
@@ -327,7 +327,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
     if (!newMessage.trim()) return;
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages`, {
         sender_type: 'client',
         sender_id: client.id,
         message: newMessage
@@ -352,7 +352,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
   const handleViewPDF = async (inv) => {
     try {
-      const userRes = await axios.get(`http://localhost:5000/api/users/${project.user_id}`);
+      const userRes = await axios.get(`https://gridlancer-production.up.railway.app/api/users/${project.user_id}`);
       if (userRes.data.plan === 'Starter') {
         setToastMessage({
           title: 'Invoice Limit',
@@ -649,7 +649,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   const handlePayInvoice = async (invoice) => {
     if (!window.confirm(`Are you sure you want to securely pay $${parseFloat(invoice.amount).toFixed(2)} for "${invoice.title}"?`)) return;
     try {
-      await axios.put(`http://localhost:5000/api/invoices/${invoice.id}`, { status: 'Paid' });
+      await axios.put(`https://gridlancer-production.up.railway.app/api/invoices/${invoice.id}`, { status: 'Paid' });
       setInvoices(invoices.map(inv => inv.id === invoice.id ? { ...inv, status: 'Paid' } : inv));
 
       // Show success toast immediately
@@ -664,7 +664,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       // Try to send a chat message about the payment (non-blocking)
       try {
         const msg = `Payment Sent: $${parseFloat(invoice.amount).toFixed(2)} for "${invoice.title}"`;
-        const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
+        const res = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages`, {
           sender_type: 'client',
           sender_id: client.id,
           message: msg
@@ -741,7 +741,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
 
   const handleApproveMilestone = async (milestoneId) => {
     try {
-      await axios.put(`http://localhost:5000/api/milestones/${milestoneId}/status`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/milestones/${milestoneId}/status`, {
         status: 'Approved',
         user_id: client.id
       });
@@ -749,7 +749,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/milestones/project/${project.id}`)
         .then(res => setMilestones(res.data));
     } catch (err) {
       console.error(err);
@@ -760,7 +760,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
     e.preventDefault();
     if (!revisionNote.trim() || !activeRevisionMsId) return;
     try {
-      await axios.put(`http://localhost:5000/api/milestones/${activeRevisionMsId}/status`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/milestones/${activeRevisionMsId}/status`, {
         status: 'Revision Requested',
         note: revisionNote,
         user_id: client.id
@@ -772,7 +772,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       setRevisionNote('');
       setActiveRevisionMsId(null);
 
-      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/milestones/project/${project.id}`)
         .then(res => setMilestones(res.data));
     } catch (err) {
       console.error(err);
@@ -782,7 +782,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   const handleSignContract = async (contractId) => {
     if (!digitalSignature.trim()) return;
     try {
-      await axios.put(`http://localhost:5000/api/contracts/${contractId}/status`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/contracts/${contractId}/status`, {
         status: 'Accepted',
         digital_signature: digitalSignature,
         client_id: client.id
@@ -792,7 +792,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/contracts/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/contracts/project/${project.id}`)
         .then(res => setContracts(res.data));
     } catch (err) {
       console.error(err);
@@ -802,7 +802,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
   const handleRejectContract = async (contractId) => {
     if (!window.confirm("Are you sure you want to reject this contract?")) return;
     try {
-      await axios.put(`http://localhost:5000/api/contracts/${contractId}/status`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/contracts/${contractId}/status`, {
         status: 'Rejected',
         client_id: client.id
       });
@@ -810,7 +810,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/contracts/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/contracts/project/${project.id}`)
         .then(res => setContracts(res.data));
     } catch (err) {
       console.error(err);
@@ -1050,7 +1050,7 @@ const ClientProjectDetail = ({ project, onBack, client }) => {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <a href={`http://localhost:5000/uploads/${file.filename}`} target='_blank' download className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg">
+                          <a href={`https://gridlancer-production.up.railway.app/uploads/${file.filename}`} target='_blank' download className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                           </a>
                         </div>

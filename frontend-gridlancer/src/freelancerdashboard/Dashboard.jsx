@@ -50,7 +50,7 @@ const Dashboard = () => {
 
   const syncUserData = async (userId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/${userId}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/users/${userId}`);
       if (res.data.status === 'banned' || res.data.is_banned) {
         setIsBanned(true);
         setBanDate(res.data.banned_until);
@@ -68,7 +68,7 @@ const Dashboard = () => {
 
   const fetchUpgradeStatus = async (userId) => {
     try {
-      const requestRes = await axios.get(`http://localhost:5000/api/upgrade-requests/user/${userId}`);
+      const requestRes = await axios.get(`https://gridlancer-production.up.railway.app/api/upgrade-requests/user/${userId}`);
       const req = requestRes.data.request;
       setPendingRequest(req);
       if (req && req.status === 'Pending') {
@@ -81,7 +81,7 @@ const Dashboard = () => {
 
   const fetchPlanLimits = async (userId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/${userId}/plan-limits`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/users/${userId}/plan-limits`);
       setPlanLimits(res.data);
     } catch (e) {
       console.error("Failed to fetch plan limits:", e);
@@ -116,7 +116,7 @@ const Dashboard = () => {
       fetchPlanLimits(loggedInUser.id);
 
       // Fetch admin settings for bank details
-      axios.get('http://localhost:5000/api/admin/settings')
+      axios.get('https://gridlancer-production.up.railway.app/api/admin/settings')
         .then(res => {
           setAdminBankDetails(res.data.admin_bank_account || 'Bank: GridLancer Main Bank\nAccount: 1234-5678-9012-3456\nHolder: Admin Corp Ltd');
         })
@@ -132,11 +132,11 @@ const Dashboard = () => {
 
     const fetchStorageData = async () => {
       try {
-        const clientsRes = await axios.get(`http://localhost:5000/api/clients/${loggedInUser.id}`);
+        const clientsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/clients/${loggedInUser.id}`);
         const clients = clientsRes.data;
         let count = 0;
         for (const client of clients) {
-          const projectsRes = await axios.get(`http://localhost:5000/api/projects/${client.id}`);
+          const projectsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${client.id}`);
           count += projectsRes.data.length;
         }
         setProjectCount(count);
@@ -262,7 +262,7 @@ const Dashboard = () => {
 
   const handleChoosePlan = async (planName) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/upgrade-request', {
+      const res = await axios.post('https://gridlancer-production.up.railway.app/api/upgrade-request', {
         user_id: user.id,
         requested_plan: planName
       });
@@ -290,7 +290,7 @@ const Dashboard = () => {
   const handleConfirmPaid = async () => {
     if (!pendingRequest) return;
     try {
-      const res = await axios.post(`http://localhost:5000/api/upgrade-request/${pendingRequest.id}/paid`);
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/upgrade-request/${pendingRequest.id}/paid`);
       showToast(res.data.message || 'Payment details marked as submitted!', 'success');
       await fetchUpgradeStatus(user.id);
     } catch (err) {
@@ -767,7 +767,7 @@ const Dashboard = () => {
                   onClick={async () => {
                     setRequestSending(true);
                     try {
-                      await axios.post(`http://localhost:5000/api/users/${user.id}/request-unban`);
+                      await axios.post(`https://gridlancer-production.up.railway.app/api/users/${user.id}/request-unban`);
                       setUnbanRequested(true);
                       showToast('Unban request submitted successfully.', 'success');
                     } catch (e) {

@@ -26,7 +26,7 @@ const ClientLogin = () => {
 
   useEffect(() => {
     if (whiteLabelParam) {
-      axios.get(`http://localhost:5000/api/white-label/${whiteLabelParam}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/white-label/${whiteLabelParam}`)
         .then(res => {
           if (res.data) {
             setBranding(res.data);
@@ -39,7 +39,7 @@ const ClientLogin = () => {
   const handleEmailBlur = async (emailVal) => {
     if (!emailVal || !emailVal.includes('@')) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/white-label/by-email?email=${emailVal}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/white-label/by-email?email=${emailVal}`);
       if (res.data) {
         setBranding(res.data);
       }
@@ -51,7 +51,7 @@ const ClientLogin = () => {
   const handleRequestUnban = async () => {
     setRequestSending(true);
     try {
-      const response = await axios.post(`http://localhost:5000/api/clients/${banModal.clientId}/request-unban`);
+      const response = await axios.post(`https://gridlancer-production.up.railway.app/api/clients/${banModal.clientId}/request-unban`);
       setBanModal(prev => ({ ...prev, unbanRequested: true }));
       setToastMessage({
         title: 'Request Submitted',
@@ -82,7 +82,7 @@ const ClientLogin = () => {
     const password = form.password.value;
 
     try {
-      const response = await axios.post('http://localhost:5000/api/client-login', { email, password });
+      const response = await axios.post('https://gridlancer-production.up.railway.app/api/client-login', { email, password });
       
       localStorage.setItem('gridlancer_client_token', response.data.token);
       localStorage.setItem('gridlancer_client', JSON.stringify(response.data.client));

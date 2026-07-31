@@ -17,7 +17,7 @@ const WhiteLabelSettings = ({ user }) => {
   const fetchBrandingSettings = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/white-label/${user.id}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/white-label/${user.id}`);
       if (res.data) {
         setLogo(res.data.logo_url || '');
         setPrimaryColor(res.data.primary_color || '#6366f1');
@@ -56,7 +56,7 @@ const WhiteLabelSettings = ({ user }) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.post('http://localhost:5000/api/white-label', {
+      await axios.post('https://gridlancer-production.up.railway.app/api/white-label', {
         user_id: user.id,
         logo_url: logo,
         primary_color: primaryColor,

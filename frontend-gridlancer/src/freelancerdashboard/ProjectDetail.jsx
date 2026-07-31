@@ -79,7 +79,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch milestones
   useEffect(() => {
     const fetchMilestones = () => {
-      axios.get(`http://localhost:5000/api/milestones/project/${project.id}?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/milestones/project/${project.id}?t=${Date.now()}`)
         .then(res => setMilestones(res.data))
         .catch(console.error);
     };
@@ -96,7 +96,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch contracts
   useEffect(() => {
     const fetchContracts = () => {
-      axios.get(`http://localhost:5000/api/contracts/project/${project.id}?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/contracts/project/${project.id}?t=${Date.now()}`)
         .then(res => setContracts(res.data))
         .catch(console.error);
     };
@@ -113,7 +113,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch time logs & search active timers
   useEffect(() => {
     const fetchTimeLogs = () => {
-      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/time-entries/project/${project.id}?t=${Date.now()}`)
         .then(res => {
           setTimeLogs(res.data);
           // Check if there is an active running timer for this user in this project
@@ -153,7 +153,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch activities
   useEffect(() => {
     const fetchActivities = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/activities?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/activities?t=${Date.now()}`)
         .then(res => setActivities(res.data))
         .catch(console.error);
     };
@@ -170,7 +170,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch invoices when tab is opened
   useEffect(() => {
     const fetchInvoices = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/invoices?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/invoices?t=${Date.now()}`)
         .then(res => setInvoices(res.data))
         .catch(console.error);
     };
@@ -189,8 +189,8 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     if (activeTab === 'Settings' && user?.plan === 'Agency' && (user?.role === 'owner' || user?.role === 'admin')) {
       setIsLoadingAssignments(true);
       Promise.all([
-        axios.get(`http://localhost:5000/api/teams/members/${user.id}?t=${Date.now()}`),
-        axios.get(`http://localhost:5000/api/projects/${project.id}/assignments?t=${Date.now()}`)
+        axios.get(`https://gridlancer-production.up.railway.app/api/teams/members/${user.id}?t=${Date.now()}`),
+        axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/assignments?t=${Date.now()}`)
       ])
         .then(([membersRes, assignmentsRes]) => {
           // membersRes.data has { team, members }
@@ -227,7 +227,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch tasks when tab is opened
   useEffect(() => {
     const fetchTasks = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/tasks?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/tasks?t=${Date.now()}`)
         .then(res => setTasks(res.data))
         .catch(console.error);
     };
@@ -244,7 +244,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   // Fetch files when tab is opened
   useEffect(() => {
     const fetchFiles = () => {
-      axios.get(`http://localhost:5000/api/projects/${project.id}/files?t=${Date.now()}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/files?t=${Date.now()}`)
         .then(res => setFiles(res.data))
         .catch(console.error);
     };
@@ -268,7 +268,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     formData.append('user_id', user?.id || 1);
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/files`, formData, {
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/files`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setFiles([{
@@ -312,7 +312,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const handleDeleteFile = async (id) => {
     if (!window.confirm('Are you sure you want to delete this file?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/files/${id}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/files/${id}`);
       setFiles(files.filter(f => f.id !== id));
     } catch (err) { console.error(err); }
   };
@@ -320,7 +320,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const handleToggleTask = async (task) => {
     try {
       const newStatus = task.is_completed ? 0 : 1;
-      const res = await axios.put(`http://localhost:5000/api/tasks/${task.id}`, { is_completed: newStatus });
+      const res = await axios.put(`https://gridlancer-production.up.railway.app/api/tasks/${task.id}`, { is_completed: newStatus });
       setTasks(tasks.map(t => t.id === task.id ? { ...t, is_completed: newStatus } : t));
       if (onUpdateProject) {
         onUpdateProject({ ...project, progress: res.data.progress, status: res.data.status });
@@ -329,7 +329,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       // Auto-send message when task is completed (only for Pro/Agency)
       if (newStatus === 1 && planLimits?.limits?.realtime !== false) {
         const taskMsg = `Task Completed: ${task.title}`;
-        const msgRes = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
+        const msgRes = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages`, {
           sender_type: 'freelancer',
           sender_id: user?.id,
           message: taskMsg
@@ -351,7 +351,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     e.preventDefault();
     if (!newInvoiceTitle || !newInvoiceAmount) return;
     try {
-      const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/invoices`, {
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/invoices`, {
         title: newInvoiceTitle,
         amount: newInvoiceAmount
       });
@@ -376,7 +376,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       // Try to send a chat message about the invoice (non-blocking)
       try {
         const invoiceMsg = `New Invoice created: ${newInvoiceTitle} for $${parseFloat(newInvoiceAmount).toFixed(2)}`;
-        const msgRes = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
+        const msgRes = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages`, {
           sender_type: 'freelancer',
           sender_id: user.id,
           message: invoiceMsg
@@ -412,7 +412,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
   const handleUpdateInvoice = async (id, status) => {
     try {
-      await axios.put(`http://localhost:5000/api/invoices/${id}`, { status, user_id: user?.id });
+      await axios.put(`https://gridlancer-production.up.railway.app/api/invoices/${id}`, { status, user_id: user?.id });
       setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status } : inv));
     } catch (err) {
       if (err.response?.status === 403 && err.response?.data?.upgrade) {
@@ -425,7 +425,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
   const handleDeleteInvoice = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/invoices/${id}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/invoices/${id}`);
       setInvoices(invoices.filter(inv => inv.id !== id));
     } catch (err) { console.error(err); }
   };
@@ -726,7 +726,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     e.preventDefault();
     try {
       const { title, description } = settingsForm;
-      await axios.put(`http://localhost:5000/api/projects/${project.id}`, { title, description });
+      await axios.put(`https://gridlancer-production.up.railway.app/api/projects/${project.id}`, { title, description });
       if (onUpdateProject) {
         onUpdateProject({ ...project, title, description });
       }
@@ -759,7 +759,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
   const handleSaveAssignments = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/projects/${project.id}/assignments`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/assignments`, {
         memberIds: assignedMembers
       });
       setToastMessage({
@@ -783,7 +783,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
   const fetchMessages = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/projects/${project.id}/messages?t=${Date.now()}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages?t=${Date.now()}`);
       const newMessages = res.data;
 
       if (previousMessageCount.current > 0 && newMessages.length > previousMessageCount.current) {
@@ -798,7 +798,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setMessages(newMessages);
       previousMessageCount.current = newMessages.length;
 
-      const typingRes = await axios.get(`http://localhost:5000/api/projects/${project.id}/typing?t=${Date.now()}`);
+      const typingRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/typing?t=${Date.now()}`);
       setIsClientTyping(typingRes.data.client);
 
     } catch (err) {
@@ -842,7 +842,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     const now = Date.now();
     if (now - lastTypingTimeRef.current > 2000) {
       lastTypingTimeRef.current = now;
-      axios.post(`http://localhost:5000/api/projects/${project.id}/typing`, { user_type: 'freelancer' }).catch(() => { });
+      axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/typing`, { user_type: 'freelancer' }).catch(() => { });
     }
   };
 
@@ -851,7 +851,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     if (!newMessage.trim()) return;
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/projects/${project.id}/messages`, {
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/projects/${project.id}/messages`, {
         sender_type: 'freelancer',
         sender_id: user.id,
         message: newMessage
@@ -926,7 +926,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const handleCreateMilestone = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/milestones", {
+      await axios.post("https://gridlancer-production.up.railway.app/api/milestones", {
         project_id: project.id,
         title: newMilestone.title,
         description: newMilestone.description,
@@ -940,7 +940,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       
-      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/milestones/project/${project.id}`)
         .then(res => setMilestones(res.data));
     } catch (err) {
       console.error(err);
@@ -952,7 +952,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
 
   const handleSubmitMilestoneForReview = async (milestoneId) => {
     try {
-      await axios.put(`http://localhost:5000/api/milestones/${milestoneId}/status`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/milestones/${milestoneId}/status`, {
         status: 'Pending Review',
         user_id: user.id
       });
@@ -960,7 +960,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       
-      axios.get(`http://localhost:5000/api/milestones/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/milestones/project/${project.id}`)
         .then(res => setMilestones(res.data));
     } catch (err) {
       console.error(err);
@@ -970,7 +970,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const handleCreateContract = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/contracts", {
+      await axios.post("https://gridlancer-production.up.railway.app/api/contracts", {
         project_id: project.id,
         title: newContract.title,
         scope: newContract.scope,
@@ -984,7 +984,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       
-      axios.get(`http://localhost:5000/api/contracts/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/contracts/project/${project.id}`)
         .then(res => setContracts(res.data));
     } catch (err) {
       console.error(err);
@@ -997,7 +997,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const handleStartTimer = async () => {
     try {
       const nowStr = new Date().toISOString();
-      const res = await axios.post("http://localhost:5000/api/time-entries", {
+      const res = await axios.post("https://gridlancer-production.up.railway.app/api/time-entries", {
         project_id: project.id,
         user_id: user.id,
         description: 'Timer started',
@@ -1011,7 +1011,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/time-entries/project/${project.id}`)
         .then(res => setTimeLogs(res.data));
     } catch (err) {
       console.error(err);
@@ -1022,7 +1022,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     if (!activeTimerId) return;
     try {
       const nowStr = new Date().toISOString();
-      await axios.put(`http://localhost:5000/api/time-entries/${activeTimerId}/stop`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/time-entries/${activeTimerId}/stop`, {
         end_time: nowStr,
         duration: timerSeconds,
         description: description || 'No description provided'
@@ -1034,7 +1034,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/time-entries/project/${project.id}`)
         .then(res => setTimeLogs(res.data));
     } catch (err) {
       console.error(err);
@@ -1048,7 +1048,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
     try {
       const now = new Date();
       const start = new Date(now.getTime() - totalSeconds * 1000).toISOString();
-      await axios.post("http://localhost:5000/api/time-entries", {
+      await axios.post("https://gridlancer-production.up.railway.app/api/time-entries", {
         project_id: project.id,
         user_id: user.id,
         description: manualTime.description || 'Manual entry',
@@ -1063,7 +1063,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/time-entries/project/${project.id}`)
         .then(res => setTimeLogs(res.data));
     } catch (err) {
       console.error(err);
@@ -1073,12 +1073,12 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
   const handleDeleteTimeLog = async (logId) => {
     if (!window.confirm("Are you sure you want to delete this time entry?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/time-entries/${logId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/time-entries/${logId}`);
       setToastMessage({ title: 'Deleted', desc: 'Time entry deleted.', type: 'success' });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      axios.get(`http://localhost:5000/api/time-entries/project/${project.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/time-entries/project/${project.id}`)
         .then(res => setTimeLogs(res.data));
     } catch (err) {
       console.error(err);
@@ -1290,7 +1290,7 @@ const ProjectDetail = ({ project, onBack, user, onUpdateProject, planLimits, onU
                           </div>
                         </div>
                         <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
-                          <a href={`http://localhost:5000/uploads/${file.filename}`} target="_blank" download className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg">
+                          <a href={`https://gridlancer-production.up.railway.app/uploads/${file.filename}`} target="_blank" download className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                           </a>
                           {user?.role !== 'member' && (

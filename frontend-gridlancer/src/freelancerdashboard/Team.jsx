@@ -23,7 +23,7 @@ const Team = ({ user, planLimits, onUpgrade }) => {
     if (!user?.id) return;
     try {
       if (!isBackground) setIsLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/teams/members/${user.id}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/teams/members/${user.id}`);
       if (res.data && res.data.team) {
         setTeamData(res.data.team);
         setMembers(res.data.members || []);
@@ -47,7 +47,7 @@ const Team = ({ user, planLimits, onUpgrade }) => {
     if (!teamNameInput.trim()) return;
     setIsCreatingTeam(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/teams', {
+      const res = await axios.post('https://gridlancer-production.up.railway.app/api/teams', {
         ownerId: user.id,
         name: teamNameInput
       });
@@ -76,7 +76,7 @@ const Team = ({ user, planLimits, onUpgrade }) => {
     setIsInviting(true);
 
     try {
-      await axios.post('http://localhost:5000/api/teams/invite', {
+      await axios.post('https://gridlancer-production.up.railway.app/api/teams/invite', {
         teamId: teamData.id,
         name: inviteForm.name,
         email: inviteForm.email,
@@ -99,7 +99,7 @@ const Team = ({ user, planLimits, onUpgrade }) => {
     if (!window.confirm(`Are you sure you want to remove ${memberName} from the team?`)) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/teams/members/${memberId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/teams/members/${memberId}`);
       setMembers(members.filter(m => m.id !== memberId));
     } catch (err) {
       alert('Failed to remove team member.');

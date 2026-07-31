@@ -33,7 +33,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade, planVersio
         setAnalyticsBlocked(true);
       } else {
         try {
-          const statsRes = await axios.get(`http://localhost:5000/api/users/${user.id}/stats`);
+          const statsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/users/${user.id}/stats`);
           const authenticStats = statsRes.data;
           setAnalyticsBlocked(false);
           setStats({
@@ -49,12 +49,12 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade, planVersio
       }
 
       // 2. Fetch Projects for Activity & Chart
-      const clientsRes = await axios.get(`http://localhost:5000/api/clients/${user.id}`);
+      const clientsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/clients/${user.id}`);
       const clients = clientsRes.data;
 
       let allProjects = [];
       for (const client of clients) {
-        const projectsRes = await axios.get(`http://localhost:5000/api/projects/${client.id}`);
+        const projectsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${client.id}`);
         allProjects = [...allProjects, ...projectsRes.data.map(p => ({ ...p, clientName: client.name }))];
       }
 
@@ -64,7 +64,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade, planVersio
       await Promise.all(allProjects.map(async (p) => {
         try {
           // Fetch messages for activity
-          const msgRes = await axios.get(`http://localhost:5000/api/projects/${p.id}/messages`);
+          const msgRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${p.id}/messages`);
           msgRes.data.forEach(msg => {
             if (msg.message.includes('New Invoice') || msg.message.includes('Payment Sent')) {
               allActivities.push({
@@ -87,7 +87,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade, planVersio
           });
 
           // Fetch invoices for Recent Invoices panel
-          const invRes = await axios.get(`http://localhost:5000/api/projects/${p.id}/invoices`);
+          const invRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${p.id}/invoices`);
           invRes.data.forEach(inv => {
             allInvoices.push({ ...inv, projectName: p.title, clientName: p.clientName });
           });
@@ -136,7 +136,7 @@ const Overview = ({ user, onNotificationClick, planLimits, onUpgrade, planVersio
   const pollNotifications = async () => {
     if (!user?.id) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/${user.id}/notifications`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/users/${user.id}/notifications`);
       const total = res.data.total || 0;
       if (res.data.latest_project_id) {
         setLatestProjectId(res.data.latest_project_id);

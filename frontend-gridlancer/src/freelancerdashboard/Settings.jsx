@@ -20,7 +20,7 @@ const Settings = ({ user, onUserUpdate }) => {
     if (!user?.id) return;
     const fetchPrefs = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/email-preferences?userId=${user.id}`);
+        const res = await axios.get(`https://gridlancer-production.up.railway.app/api/email-preferences?userId=${user.id}`);
         if (res.data) {
           setPreferences(res.data);
         }
@@ -39,7 +39,7 @@ const Settings = ({ user, onUserUpdate }) => {
 
   const handleSavePreferences = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/email-preferences`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/email-preferences`, {
         userId: user.id,
         preferences
       });
@@ -75,7 +75,7 @@ const Settings = ({ user, onUserUpdate }) => {
   const handleDeleteAccount = async () => {
     if (window.confirm("Are you ABSOLUTELY sure you want to delete your account? This will permanently delete all your projects, clients, and data. This action cannot be undone.")) {
       try {
-        await axios.delete(`http://localhost:5000/api/users/${user.id}`);
+        await axios.delete(`https://gridlancer-production.up.railway.app/api/users/${user.id}`);
         localStorage.removeItem('gridlancer_user');
         localStorage.removeItem('gridlancer_token');
         navigate('/');
@@ -108,7 +108,7 @@ const Settings = ({ user, onUserUpdate }) => {
     setError('');
 
     try {
-      await axios.put(`http://localhost:5000/api/users/${user.id}`, {
+      await axios.put(`https://gridlancer-production.up.railway.app/api/users/${user.id}`, {
         name: formData.name,
         email: formData.email,
         password: formData.password || undefined,

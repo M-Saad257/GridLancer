@@ -24,16 +24,16 @@ const Projects = ({ user, pendingProjectId, onClearPending, planLimits, onUpgrad
       if (!user?.id) return;
       try {
         if (!isBackground) setIsLoading(true);
-        const clientsRes = await axios.get(`http://localhost:5000/api/clients/${user.id}?t=${Date.now()}`);
+        const clientsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/clients/${user.id}?t=${Date.now()}`);
         const clients = clientsRes.data;
 
         let allProjects = [];
         for (const client of clients) {
-          const projectsRes = await axios.get(`http://localhost:5000/api/projects/${client.id}?t=${Date.now()}`);
+          const projectsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${client.id}?t=${Date.now()}`);
 
           const projectsWithStats = await Promise.all(projectsRes.data.map(async (p) => {
             try {
-              const invRes = await axios.get(`http://localhost:5000/api/projects/${p.id}/invoices?t=${Date.now()}`);
+              const invRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${p.id}/invoices?t=${Date.now()}`);
               const paid = invRes.data.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
               const unpaidCount = invRes.data.filter(i => i.status !== 'Paid').length;
               return {
@@ -102,7 +102,7 @@ const Projects = ({ user, pendingProjectId, onClearPending, planLimits, onUpgrad
     e.stopPropagation();
     if (!window.confirm(`Are you sure you want to delete "${projectTitle}"? This cannot be undone.`)) return;
     try {
-      await axios.delete(`http://localhost:5000/api/projects/${projectId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/projects/${projectId}`);
       setProjects(projects.filter(p => p.id !== projectId));
     } catch (err) {
       console.error('Failed to delete project', err);

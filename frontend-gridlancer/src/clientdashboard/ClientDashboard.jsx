@@ -28,7 +28,7 @@ const ClientDashboard = () => {
   useEffect(() => {
     const ownerId = whiteLabelParam || client?.user_id;
     if (ownerId) {
-      axios.get(`http://localhost:5000/api/white-label/${ownerId}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/white-label/${ownerId}`)
         .then(res => {
           if (res.data) {
             setBranding(res.data);
@@ -73,7 +73,7 @@ const ClientDashboard = () => {
 
   const syncClientData = async (clientId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/clients/direct/${clientId}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/clients/direct/${clientId}`);
       if (res.data.status === 'banned' || res.data.is_banned) {
         setIsBanned(true);
         setBanDate(res.data.banned_until);
@@ -266,7 +266,7 @@ const ClientDashboard = () => {
                   onClick={async () => {
                     setRequestSending(true);
                     try {
-                      await axios.post(`http://localhost:5000/api/clients/${client.id}/request-unban`);
+                      await axios.post(`https://gridlancer-production.up.railway.app/api/clients/${client.id}/request-unban`);
                       setUnbanRequested(true);
                     } catch (e) {
                       console.error(e);

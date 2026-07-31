@@ -12,12 +12,12 @@ const ClientProjects = ({ client }) => {
     const fetchProjects = async (isBackground = false) => {
       try {
         if (!isBackground) setIsLoading(true);
-        const res = await axios.get(`http://localhost:5000/api/client/projects?t=${Date.now()}`);
+        const res = await axios.get(`https://gridlancer-production.up.railway.app/api/client/projects?t=${Date.now()}`);
         const projectsData = res.data;
 
         const projectsWithStats = await Promise.all(projectsData.map(async (p) => {
           try {
-            const invRes = await axios.get(`http://localhost:5000/api/projects/${p.id}/invoices?t=${Date.now()}`);
+            const invRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${p.id}/invoices?t=${Date.now()}`);
             const paid = invRes.data.filter(i => i.status === 'Paid').reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
             const unpaidCount = invRes.data.filter(i => i.status !== 'Paid').length;
             return { ...p, status: p.status || 'Pending', progress: p.progress || 0, totalPaid: paid, unpaidCount };

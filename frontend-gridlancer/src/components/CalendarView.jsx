@@ -21,8 +21,8 @@ const CalendarView = ({ user, client, onOpenProject, onOpenInvoice, onOpenMilest
     try {
       setLoading(true);
       const url = clientId 
-        ? `http://localhost:5000/api/calendar/client/${clientId}` 
-        : `http://localhost:5000/api/calendar/user/${userId}`;
+        ? `https://gridlancer-production.up.railway.app/api/calendar/client/${clientId}` 
+        : `https://gridlancer-production.up.railway.app/api/calendar/user/${userId}`;
       const res = await axios.get(url + `?t=${Date.now()}`);
       setEvents(res.data);
     } catch (err) {

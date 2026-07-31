@@ -14,7 +14,7 @@ const ClientOverview = ({ client }) => {
     try {
       if (!isBackground) setIsLoading(true);
       // Using the same projects endpoint, then calculating stats client-side
-      const res = await axios.get(`http://localhost:5000/api/client/projects?t=${Date.now()}`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/client/projects?t=${Date.now()}`);
       const projects = res.data;
 
       const activeCount = projects.filter(p => p.status !== 'Completed').length;
@@ -23,7 +23,7 @@ const ClientOverview = ({ client }) => {
       let totalPaid = 0;
       try {
         const allInvoices = await Promise.all(projects.map(async (p) => {
-          const invRes = await axios.get(`http://localhost:5000/api/projects/${p.id}/invoices?t=${Date.now()}`);
+          const invRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${p.id}/invoices?t=${Date.now()}`);
           return invRes.data.map(inv => ({ ...inv, projectName: p.title }));
         }));
         const flatInvoices = allInvoices.flat();

@@ -22,7 +22,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated, planLimits }
 
   useEffect(() => {
     if (user.plan === 'Agency' && isOpen) {
-      axios.get(`http://localhost:5000/api/teams/members/${user.id}`)
+      axios.get(`https://gridlancer-production.up.railway.app/api/teams/members/${user.id}`)
         .then(res => {
           if (res.data && res.data.members) {
             const assignable = res.data.members.filter(m => m.role !== 'owner');
@@ -96,7 +96,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated, planLimits }
     const currentPlanName = planLimits?.plan || user.plan || 'Starter';
 
     try {
-      const clientsRes = await axios.get(`http://localhost:5000/api/clients/${user.id}`);
+      const clientsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/clients/${user.id}`);
       const currentClients = clientsRes.data;
 
       // 1. Client limit check
@@ -110,7 +110,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated, planLimits }
       // 2. Project limit check
       let count = 0;
       for (const cl of currentClients) {
-        const projectsRes = await axios.get(`http://localhost:5000/api/projects/${cl.id}`);
+        const projectsRes = await axios.get(`https://gridlancer-production.up.railway.app/api/projects/${cl.id}`);
         count += projectsRes.data.length;
       }
       if (count >= maxProjects) {
@@ -127,7 +127,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated, planLimits }
 
     try {
       // Step 1: Create the client
-      const clientRes = await axios.post('http://localhost:5000/api/clients', {
+      const clientRes = await axios.post('https://gridlancer-production.up.railway.app/api/clients', {
         user_id: user.id,
         name: formData.clientName,
         email: formData.clientEmail,
@@ -137,7 +137,7 @@ const NewProjectModal = ({ isOpen, onClose, user, onProjectCreated, planLimits }
       const clientId = clientRes.data.clientId;
 
       // Step 2: Create the project
-      const projRes = await axios.post('http://localhost:5000/api/projects', {
+      const projRes = await axios.post('https://gridlancer-production.up.railway.app/api/projects', {
         user_id: user.id,
         client_id: clientId,
         title: formData.projectName,

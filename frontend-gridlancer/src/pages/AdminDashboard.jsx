@@ -82,7 +82,7 @@ const AdminDashboard = () => {
     setIsSubmitting(true);
     setLoginError('');
     try {
-      const res = await axios.post('http://localhost:5000/api/admin/login', {
+      const res = await axios.post('https://gridlancer-production.up.railway.app/api/admin/login', {
         email: loginEmail,
         password: loginPassword
       });
@@ -108,7 +108,7 @@ const AdminDashboard = () => {
   const fetchDashboardData = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/dashboard');
+      const res = await axios.get('https://gridlancer-production.up.railway.app/api/admin/dashboard');
       setProjects(res.data.projects || []);
       setFreelancers(res.data.freelancers || []);
       setClients(res.data.clients || []);
@@ -117,7 +117,7 @@ const AdminDashboard = () => {
       setComplaints(res.data.complaints || []);
 
       // Fetch admin settings for bank account
-      const settingsRes = await axios.get('http://localhost:5000/api/admin/settings');
+      const settingsRes = await axios.get('https://gridlancer-production.up.railway.app/api/admin/settings');
       setBankAccount(settingsRes.data.admin_bank_account || '');
     } catch (err) {
       console.error(err);
@@ -130,7 +130,7 @@ const AdminDashboard = () => {
   // DISPUTE RESOLUTION ACTIONS
   const handleDisputeAction = async (complaintId, action, payload = {}) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/admin/complaints/${complaintId}/action`, {
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/admin/complaints/${complaintId}/action`, {
         action,
         reason: payload.reason || '',
         duration: payload.duration || '1d',
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
   const handleBanFreelancer = async (userId) => {
     const duration = banDurations[userId] || '1d';
     try {
-      const res = await axios.post(`http://localhost:5000/api/admin/users/${userId}/ban`, { duration });
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/admin/users/${userId}/ban`, { duration });
       showToast(`Freelancer banned successfully.`, 'success');
       fetchDashboardData();
     } catch (err) {
@@ -164,7 +164,7 @@ const AdminDashboard = () => {
   // UNBAN FREELANCER
   const handleUnbanFreelancer = async (userId) => {
     try {
-      await axios.post(`http://localhost:5000/api/admin/users/${userId}/unban`);
+      await axios.post(`https://gridlancer-production.up.railway.app/api/admin/users/${userId}/unban`);
       showToast('Freelancer unbanned successfully.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -176,7 +176,7 @@ const AdminDashboard = () => {
   const handleDeleteFreelancer = async (userId) => {
     if (!window.confirm('Are you sure you want to permanently delete this Freelancer? All their projects, files, and clients will remain linked but their account will be removed.')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/users/${userId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/users/${userId}`);
       showToast('Freelancer deleted successfully.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -188,7 +188,7 @@ const AdminDashboard = () => {
   const handleBanClient = async (clientId) => {
     const duration = clientBanDurations[clientId] || '1d';
     try {
-      await axios.post(`http://localhost:5000/api/admin/clients/${clientId}/ban`, { duration });
+      await axios.post(`https://gridlancer-production.up.railway.app/api/admin/clients/${clientId}/ban`, { duration });
       showToast(`Client banned successfully.`, 'success');
       fetchDashboardData();
     } catch (err) {
@@ -199,7 +199,7 @@ const AdminDashboard = () => {
   // UNBAN CLIENT
   const handleUnbanClient = async (clientId) => {
     try {
-      await axios.post(`http://localhost:5000/api/admin/clients/${clientId}/unban`);
+      await axios.post(`https://gridlancer-production.up.railway.app/api/admin/clients/${clientId}/unban`);
       showToast('Client unbanned successfully.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -211,7 +211,7 @@ const AdminDashboard = () => {
   const handleDeleteClient = async (clientId) => {
     if (!window.confirm('Are you sure you want to permanently delete this client?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/clients/${clientId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/clients/${clientId}`);
       showToast('Client deleted successfully.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -223,7 +223,7 @@ const AdminDashboard = () => {
   const handleDeleteProject = async (projectId) => {
     if (!window.confirm('Are you sure you want to permanently delete this project? All associated tasks, invoices, files, and discussion logs will be deleted.')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/projects/${projectId}`);
+      await axios.delete(`https://gridlancer-production.up.railway.app/api/projects/${projectId}`);
       showToast('Project deleted successfully.', 'success');
       fetchDashboardData(true);
     } catch (err) {
@@ -234,7 +234,7 @@ const AdminDashboard = () => {
   // APPROVE UPGRADE
   const handleApproveUpgrade = async (requestId) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/admin/upgrade-requests/${requestId}/approve`);
+      const res = await axios.post(`https://gridlancer-production.up.railway.app/api/admin/upgrade-requests/${requestId}/approve`);
       showToast(res.data.message || 'Upgrade request approved.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -245,7 +245,7 @@ const AdminDashboard = () => {
   // REJECT UPGRADE
   const handleRejectUpgrade = async (requestId) => {
     try {
-      await axios.post(`http://localhost:5000/api/admin/upgrade-requests/${requestId}/reject`);
+      await axios.post(`https://gridlancer-production.up.railway.app/api/admin/upgrade-requests/${requestId}/reject`);
       showToast('Upgrade request rejected.', 'success');
       fetchDashboardData();
     } catch (err) {
@@ -257,7 +257,7 @@ const AdminDashboard = () => {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/admin/settings', {
+      await axios.post('https://gridlancer-production.up.railway.app/api/admin/settings', {
         admin_bank_account: bankAccount
       });
       showToast('Admin settings updated successfully.', 'success');
@@ -272,7 +272,7 @@ const AdminDashboard = () => {
     setSelectedProject(project);
     setLoadingDetails(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/admin/projects/${project.id}/details`);
+      const res = await axios.get(`https://gridlancer-production.up.railway.app/api/admin/projects/${project.id}/details`);
       setProjectDetails(res.data);
     } catch (err) {
       showToast('Error loading project details.', 'error');
@@ -1054,7 +1054,7 @@ const AdminDashboard = () => {
                               {comp.evidence ? (
                                 <div className="mt-2.5">
                                   <a 
-                                    href={`http://localhost:5000/uploads/${comp.evidence}`}
+                                    href={`https://gridlancer-production.up.railway.app/uploads/${comp.evidence}`}
                                     download
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -1404,7 +1404,7 @@ const AdminDashboard = () => {
                 <div className="mt-3 pt-3 border-t border-slate-900 flex items-center justify-between">
                   <span className="text-[10px] text-slate-500">Evidence Attached: {resolvingComplaint.evidence_name}</span>
                   <a 
-                    href={`http://localhost:5000/uploads/${resolvingComplaint.evidence}`}
+                    href={`https://gridlancer-production.up.railway.app/uploads/${resolvingComplaint.evidence}`}
                     download
                     target="_blank"
                     rel="noopener noreferrer"
